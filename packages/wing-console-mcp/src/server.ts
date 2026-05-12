@@ -29,6 +29,9 @@ import { registerSceneTools } from "./tools/scenes.js";
 import { registerMeterTools } from "./tools/meters.js";
 import { registerDiagnosisTools } from "./tools/diagnosis.js";
 import { registerViewTools } from "./tools/views.js";
+import { registerProcessingTools } from "./tools/processing.js";
+import { registerGroupTools } from "./tools/groups.js";
+import { registerBulkTools } from "./tools/bulk.js";
 import { registerRawTools } from "./tools/raw.js";
 import { Mode, ToolResult } from "./types.js";
 
@@ -70,6 +73,9 @@ const sceneTools = registerSceneTools(driver, changePlanner);
 const meterTools = registerMeterTools(driver);
 const diagnosisTools = registerDiagnosisTools(driver, changePlanner);
 const viewTools = registerViewTools(driver);
+const processingTools = registerProcessingTools(driver, changePlanner);
+const groupTools = registerGroupTools(driver, changePlanner);
+const bulkTools = registerBulkTools(driver);
 const rawTools = registerRawTools(driver, changePlanner);
 
 const allTools: Record<string, any> = {
@@ -84,6 +90,9 @@ const allTools: Record<string, any> = {
   ...meterTools,
   ...diagnosisTools,
   ...viewTools,
+  ...processingTools,
+  ...groupTools,
+  ...bulkTools,
   // Raw tools only if enabled
   ...(config.enableRaw ? rawTools : {}),
 };

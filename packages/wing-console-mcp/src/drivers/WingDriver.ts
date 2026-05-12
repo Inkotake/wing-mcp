@@ -80,15 +80,42 @@ export class FakeWingDriver implements WingDriver {
       ]);
     }
 
-    // Scenes, DCA, Mute groups
+    // Scenes, DCA, Mute groups, Matrix, FX, Recorder
     add([
       ["/scene/current", { type: "int", value: 0 }],
       ["/scene/0/name", { type: "string", value: "Scene 0 - Empty" }],
-      ["/dca/1/name", { type: "string", value: "DCA 1" }],
-      ["/dca/1/mute", { type: "bool", value: false }],
-      ["/dca/1/fader", { type: "float", value: 0.0, unit: "dB" }],
-      ["/mutegroup/1/mute", { type: "bool", value: false }],
-      ["/mutegroup/2/mute", { type: "bool", value: false }],
+    ]);
+    // DCA 1-8
+    for (let d = 1; d <= 8; d++) {
+      add([
+        [`/dca/${d}/name`, { type: "string", value: `DCA ${d}` }],
+        [`/dca/${d}/mute`, { type: "bool", value: false }],
+        [`/dca/${d}/fader`, { type: "float", value: 0.0, unit: "dB" }],
+      ]);
+    }
+    // Mute Groups 1-6
+    for (let g = 1; g <= 6; g++) {
+      add([[`/mutegroup/${g}/mute`, { type: "bool", value: false }]]);
+    }
+    // Matrix 1-8
+    for (let m = 1; m <= 8; m++) {
+      add([
+        [`/mtx/${m}/name`, { type: "string", value: `Matrix ${m}` }],
+        [`/mtx/${m}/mute`, { type: "bool", value: false }],
+        [`/mtx/${m}/fader`, { type: "float", value: 0.0, unit: "dB" }],
+      ]);
+    }
+    // FX slots 1-8
+    const fxModels = ["Hall Reverb", "Stereo Delay", "Plate Reverb", "Chorus", "Flanger", "Phaser", "Tremolo", "DeEsser"];
+    for (let f = 1; f <= 8; f++) {
+      add([
+        [`/fx/${f}/model`, { type: "string", value: fxModels[f - 1] }],
+        [`/fx/${f}/on`, { type: "bool", value: f <= 2 }],
+      ]);
+    }
+    // Recorder
+    add([
+      ["/recorder/transport", { type: "string", value: "stopped" }],
     ]);
 
     for (const [path, value] of baseParams) {
@@ -103,15 +130,43 @@ export class FakeWingDriver implements WingDriver {
       [`/ch/${ch}/fader`, { type: "float", value: 0.0, unit: "dB" }],
       [`/ch/${ch}/pan`, { type: "float", value: 0.0, unit: "%" }],
       [`/ch/${ch}/source`, { type: "string", value: `Local ${ch}` }],
+      // EQ - 4-band
+      [`/ch/${ch}/eq/on`, { type: "bool", value: true }],
       [`/ch/${ch}/eq/high/gain`, { type: "float", value: 0.0, unit: "dB" }],
-      [`/ch/${ch}/eq/mid/gain`, { type: "float", value: 0.0, unit: "dB" }],
+      [`/ch/${ch}/eq/high/freq`, { type: "float", value: 8000, unit: "Hz" }],
+      [`/ch/${ch}/eq/high/q`, { type: "float", value: 0.7 }],
+      [`/ch/${ch}/eq/hi_mid/gain`, { type: "float", value: 0.0, unit: "dB" }],
+      [`/ch/${ch}/eq/hi_mid/freq`, { type: "float", value: 2500, unit: "Hz" }],
+      [`/ch/${ch}/eq/hi_mid/q`, { type: "float", value: 1.0 }],
+      [`/ch/${ch}/eq/lo_mid/gain`, { type: "float", value: 0.0, unit: "dB" }],
+      [`/ch/${ch}/eq/lo_mid/freq`, { type: "float", value: 400, unit: "Hz" }],
+      [`/ch/${ch}/eq/lo_mid/q`, { type: "float", value: 1.0 }],
       [`/ch/${ch}/eq/low/gain`, { type: "float", value: 0.0, unit: "dB" }],
+      [`/ch/${ch}/eq/low/freq`, { type: "float", value: 100, unit: "Hz" }],
+      [`/ch/${ch}/eq/low/q`, { type: "float", value: 0.7 }],
+      // Gate
+      [`/ch/${ch}/gate/on`, { type: "bool", value: false }],
       [`/ch/${ch}/gate/threshold`, { type: "float", value: -80.0, unit: "dB" }],
+      [`/ch/${ch}/gate/range`, { type: "float", value: 30.0, unit: "dB" }],
+      [`/ch/${ch}/gate/attack`, { type: "float", value: 1.0, unit: "ms" }],
+      [`/ch/${ch}/gate/hold`, { type: "float", value: 50.0, unit: "ms" }],
+      [`/ch/${ch}/gate/release`, { type: "float", value: 100.0, unit: "ms" }],
+      // Compressor
+      [`/ch/${ch}/comp/on`, { type: "bool", value: false }],
       [`/ch/${ch}/comp/threshold`, { type: "float", value: 0.0, unit: "dB" }],
+      [`/ch/${ch}/comp/ratio`, { type: "float", value: 3.0, unit: ":1" }],
+      [`/ch/${ch}/comp/attack`, { type: "float", value: 10.0, unit: "ms" }],
+      [`/ch/${ch}/comp/release`, { type: "float", value: 100.0, unit: "ms" }],
+      [`/ch/${ch}/comp/gain`, { type: "float", value: 0.0, unit: "dB" }],
+      // Sends to buses 1-8 (commonly used)
       [`/ch/${ch}/send/1/level`, { type: "float", value: -99.0, unit: "dB" }],
       [`/ch/${ch}/send/2/level`, { type: "float", value: -99.0, unit: "dB" }],
       [`/ch/${ch}/send/3/level`, { type: "float", value: -99.0, unit: "dB" }],
       [`/ch/${ch}/send/4/level`, { type: "float", value: -99.0, unit: "dB" }],
+      [`/ch/${ch}/send/5/level`, { type: "float", value: -99.0, unit: "dB" }],
+      [`/ch/${ch}/send/6/level`, { type: "float", value: -99.0, unit: "dB" }],
+      [`/ch/${ch}/send/7/level`, { type: "float", value: -99.0, unit: "dB" }],
+      [`/ch/${ch}/send/8/level`, { type: "float", value: -99.0, unit: "dB" }],
     ];
   }
 
