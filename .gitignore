@@ -1,0 +1,15 @@
+node_modules/
+dist/
+*.tsbuildinfo
+target/
+.env
+*.log
+.venv/
+__pycache__/
+*.pyc
+.cache/
+coverage/
+*.heapsnapshot
+*.trace.json.gz
+.DS_Store
+Thumbs.db

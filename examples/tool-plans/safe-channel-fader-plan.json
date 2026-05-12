@@ -1,0 +1,18 @@
+{
+  "description": "Safe channel fader adjustment plan",
+  "steps": [
+    {
+      "tool": "wing_channel_get",
+      "target": "/ch/1/fader",
+      "risk": "none",
+      "description": "Read current fader state"
+    },
+    {
+      "tool": "wing_channel_adjust_fader_prepare",
+      "target": "/ch/1/fader",
+      "risk": "medium",
+      "description": "Prepare +3dB fader adjustment for Vocal 1",
+      "risk_acknowledged": true
+    }
+  ]
+}

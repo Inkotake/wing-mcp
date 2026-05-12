@@ -1,0 +1,11 @@
+{
+  "id": "inc_20260512_001",
+  "timestamp": "2026-05-12T14:30:00Z",
+  "roomId": "room-a",
+  "type": "no_sound",
+  "target": "Vocal 1 (CH 1)",
+  "description": "主唱突然没声音，检查发现无线接收器掉线，重新配对后恢复。",
+  "resolution": "重新配对无线接收器。不是调音台的问题。",
+  "relatedAuditId": "aud_abc123",
+  "tags": ["wireless", "vocal", "no_sound"]
+}

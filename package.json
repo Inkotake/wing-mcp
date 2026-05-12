@@ -1,0 +1,16 @@
+{
+  "name": "ai-sound-engineer",
+  "private": true,
+  "version": "0.1.0",
+  "description": "WING AI Sound Engineer - Behringer WING Family Console MCP Control System",
+  "scripts": {
+    "build": "pnpm -r run build",
+    "test": "pnpm -r run test",
+    "lint": "pnpm -r run lint",
+    "typecheck": "pnpm -r run typecheck",
+    "clean": "pnpm -r run clean"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

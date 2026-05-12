@@ -1,0 +1,78 @@
+{
+  "version": "0.1.0",
+  "modes": {
+    "read_only": {
+      "allow_write": false,
+      "allowed_risks": [
+        "none"
+      ]
+    },
+    "rehearsal_safe": {
+      "allow_write": true,
+      "allowed_risks": [
+        "none",
+        "low",
+        "medium"
+      ],
+      "require_confirmation_for": [
+        "medium"
+      ],
+      "deny_tools": [
+        "wing_raw_osc_apply",
+        "wing_raw_native_apply"
+      ]
+    },
+    "maintenance": {
+      "allow_write": true,
+      "allowed_risks": [
+        "none",
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "require_confirmation_for": [
+        "medium",
+        "high",
+        "critical"
+      ],
+      "deny_tools": []
+    },
+    "developer_raw": {
+      "allow_write": true,
+      "allowed_risks": [
+        "none",
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "require_confirmation_for": [
+        "medium",
+        "high",
+        "critical"
+      ],
+      "allow_raw": true
+    }
+  },
+  "delta_caps": {
+    "channel_fader_db": 3.0,
+    "send_db": 6.0,
+    "main_fader_db": 1.5,
+    "eq_gain_db": 3.0,
+    "gate_threshold_db": 6.0
+  },
+  "critical_confirmation_templates": {
+    "phantom": "确认开启 {target} 的 48V 幻象电源，我确认连接设备需要幻象电源",
+    "scene_recall": "确认 recall {scene}，我知道这会改变当前调音台状态",
+    "routing": "确认修改 {target} 的路由，我知道可能导致主扩或耳返无声"
+  },
+  "absolute_denials": [
+    "raw protocol apply in live mode",
+    "critical apply without exact confirmation",
+    "expired confirmation id",
+    "confirmation id target mismatch",
+    "material state change between prepare and apply",
+    "network setting write unless explicitly enabled"
+  ]
+}

@@ -1,0 +1,166 @@
+server: wing-console-mcp
+version: 0.1.0
+principles:
+  - all write tools use prepare/apply
+  - all write tools read-before-write and readback
+  - high-level semantic tools before raw protocol tools
+  - raw tools disabled by default
+  - live mode requires confirmation for medium/high/critical
+
+tools:
+  device:
+    - name: wing_discover
+      risk: none
+      readOnly: true
+      description: Use this to discover WING family consoles on the control network.
+    - name: wing_connect
+      risk: none
+      readOnly: true
+      description: Use this to establish a driver session with a selected WING console.
+    - name: wing_get_status
+      risk: none
+      readOnly: true
+      description: Use this to inspect connection, driver, policy, live mode, and device status.
+
+  schema:
+    - name: wing_schema_search
+      risk: none
+      readOnly: true
+      description: Use this to find WING parameters by natural language, canonical path, or alias.
+    - name: wing_param_resolve
+      risk: none
+      readOnly: true
+      description: Use this to resolve user phrases like "main vocal" or "drummer ears" to mixer targets.
+
+  params:
+    - name: wing_param_get
+      risk: none
+      readOnly: true
+    - name: wing_param_set_prepare
+      risk: dynamic
+      readOnly: false
+    - name: wing_param_set_apply
+      risk: dynamic
+      readOnly: false
+
+  channels:
+    - name: wing_channel_list
+      risk: none
+      readOnly: true
+    - name: wing_channel_get
+      risk: none
+      readOnly: true
+    - name: wing_channel_adjust_fader_prepare
+      risk: medium
+      readOnly: false
+    - name: wing_channel_adjust_fader_apply
+      risk: medium
+      readOnly: false
+    - name: wing_channel_set_mute_prepare
+      risk: medium
+      readOnly: false
+    - name: wing_channel_set_mute_apply
+      risk: medium
+      readOnly: false
+
+  sends:
+    - name: wing_send_get
+      risk: none
+      readOnly: true
+    - name: wing_send_adjust_prepare
+      risk: medium
+      readOnly: false
+    - name: wing_send_adjust_apply
+      risk: medium
+      readOnly: false
+
+  routing:
+    - name: wing_routing_trace
+      risk: none
+      readOnly: true
+    - name: wing_routing_get
+      risk: none
+      readOnly: true
+    - name: wing_routing_set_prepare
+      risk: critical
+      readOnly: false
+    - name: wing_routing_set_apply
+      risk: critical
+      readOnly: false
+
+  headamp:
+    - name: wing_headamp_get
+      risk: none
+      readOnly: true
+    - name: wing_headamp_set_prepare
+      risk: high
+      readOnly: false
+    - name: wing_headamp_set_apply
+      risk: high
+      readOnly: false
+    - name: wing_phantom_set_prepare
+      risk: critical
+      readOnly: false
+    - name: wing_phantom_set_apply
+      risk: critical
+      readOnly: false
+
+  scenes:
+    - name: wing_scene_list
+      risk: none
+      readOnly: true
+    - name: wing_scene_recall_prepare
+      risk: critical
+      readOnly: false
+    - name: wing_scene_recall_apply
+      risk: critical
+      readOnly: false
+    - name: wing_snapshot_save_prepare
+      risk: medium
+      readOnly: false
+    - name: wing_snapshot_save_apply
+      risk: medium
+      readOnly: false
+
+  meters:
+    - name: wing_meter_catalog
+      risk: none
+      readOnly: true
+    - name: wing_meter_read
+      risk: none
+      readOnly: true
+    - name: wing_signal_check
+      risk: none
+      readOnly: true
+
+  diagnosis:
+    - name: sound_diagnosis_start
+      risk: none
+      readOnly: true
+    - name: sound_diagnosis_next_step
+      risk: none
+      readOnly: true
+    - name: sound_diagnosis_prepare_fix
+      risk: dynamic
+      readOnly: false
+    - name: sound_diagnosis_apply_fix
+      risk: dynamic
+      readOnly: false
+
+  raw:
+    - name: wing_raw_osc_prepare
+      risk: critical
+      readOnly: false
+      defaultEnabled: false
+    - name: wing_raw_osc_apply
+      risk: critical
+      readOnly: false
+      defaultEnabled: false
+    - name: wing_raw_native_prepare
+      risk: critical
+      readOnly: false
+      defaultEnabled: false
+    - name: wing_raw_native_apply
+      risk: critical
+      readOnly: false
+      defaultEnabled: false

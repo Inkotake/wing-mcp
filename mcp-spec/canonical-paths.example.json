@@ -1,0 +1,52 @@
+{
+  "paths": [
+    {
+      "canonical": "/ch/1/mute",
+      "display": "Channel 1 Mute",
+      "type": "bool",
+      "risk": "medium",
+      "aliases": [
+        "ch1 mute",
+        "channel 1 mute"
+      ]
+    },
+    {
+      "canonical": "/ch/1/fdr",
+      "display": "Channel 1 Fader",
+      "type": "float_db",
+      "risk": "medium",
+      "unit": "dB"
+    },
+    {
+      "canonical": "/ch/1/name",
+      "display": "Channel 1 Name",
+      "type": "string",
+      "risk": "low"
+    },
+    {
+      "canonical": "/main/1/fdr",
+      "display": "Main LR Fader",
+      "type": "float_db",
+      "risk": "high",
+      "unit": "dB"
+    },
+    {
+      "canonical": "/main/1/mute",
+      "display": "Main LR Mute",
+      "type": "bool",
+      "risk": "high"
+    },
+    {
+      "canonical": "/io/local/1/phantom",
+      "display": "Local Input 1 Phantom Power",
+      "type": "bool",
+      "risk": "critical"
+    },
+    {
+      "canonical": "/routing/source/lcl/1",
+      "display": "Local Input 1 Routing Source",
+      "type": "node",
+      "risk": "critical"
+    }
+  ]
+}

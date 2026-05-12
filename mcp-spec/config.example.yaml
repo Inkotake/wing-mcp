@@ -1,0 +1,42 @@
+room_id: room-a
+mode: rehearsal_safe
+live_mode: true
+
+wing:
+  preferred_driver: native
+  osc_fallback: true
+  discovery:
+    enabled: true
+    timeout_ms: 1500
+    direct_ips:
+      - 192.168.1.62
+  native_sidecar:
+    command: ./bin/wing-native-sidecar
+    transport: stdio
+  osc:
+    port: 2223
+
+safety:
+  default_dry_run: true
+  require_confirmation_for:
+    - medium
+    - high
+    - critical
+  max_channel_fader_delta_db: 3
+  max_send_delta_db: 6
+  max_main_fader_delta_db: 1.5
+  raw_protocol_enabled: false
+
+memory:
+  sqlite_path: ./data/memory.sqlite
+  docs_path: ./data/docs
+  vector_store: lancedb
+
+voice:
+  mode: push_to_talk
+  tts_output: local_speaker
+  never_route_tts_to_main: true
+
+logging:
+  audit_path: ./data/audit.jsonl
+  level: info
