@@ -192,6 +192,11 @@ export const RISK_MAP: Record<string, Risk> = {
   wing_param_bulk_get: "none",
   wing_debug_dump_state: "none",
   wing_usb_recorder_get: "none",
+  // Emergency tools
+  wing_emergency_stop: "critical",
+  wing_emergency_stop_apply: "critical",
+  wing_emergency_status: "none",
+  wing_emergency_reset: "high",
   // Raw tools
   wing_raw_osc_prepare: "critical",
   wing_raw_osc_apply: "critical",

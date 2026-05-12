@@ -60,7 +60,7 @@ export class FakeWingDriver implements WingDriver {
     ]);
 
     // Channels (48 channels)
-    [1,2,3,4,8,12,16,20,24,28,32,36,40,44,48].forEach(ch => add(this.makeChannelParams(ch)));
+    for (let ch = 1; ch <= 48; ch++) add(this.makeChannelParams(ch));
 
     // Main LR
     add([
@@ -70,7 +70,7 @@ export class FakeWingDriver implements WingDriver {
     ]);
 
     // Buses
-    [1,2,3,4,6,8,10,12,14,16].forEach(b => add(this.makeBusParams(b)));
+    for (let b = 1; b <= 16; b++) add(this.makeBusParams(b));
 
     // Headamp for inputs
     for (let i = 1; i <= 48; i++) {

@@ -1,4 +1,5 @@
 packages:
-  - "packages/*"
+  - "packages/wing-console-mcp"
+  - "packages/fake-wing"
 allowBuilds:
   esbuild: true

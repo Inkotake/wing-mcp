@@ -12,11 +12,14 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 
 import { FakeWingDriver, WingDriver } from "./drivers/WingDriver.js";
+import { NativeDriver } from "./drivers/NativeDriver.js";
+import { OscDriver } from "./drivers/OscDriver.js";
 import { RiskEngine } from "./safety/RiskEngine.js";
 import { PolicyEngine } from "./safety/PolicyEngine.js";
 import { ConfirmationManager } from "./safety/ConfirmationManager.js";
 import { AuditLogger } from "./safety/AuditLogger.js";
 import { ChangePlanner } from "./safety/ChangePlanner.js";
+import { RateLimiter } from "./safety/RateLimiter.js";
 import { StateCache, AliasResolver } from "./state/StateCache.js";
 import { registerDeviceTools } from "./tools/device.js";
 import { registerSchemaTools } from "./tools/schema.js";
@@ -32,6 +35,7 @@ import { registerViewTools } from "./tools/views.js";
 import { registerProcessingTools } from "./tools/processing.js";
 import { registerGroupTools } from "./tools/groups.js";
 import { registerBulkTools } from "./tools/bulk.js";
+import { registerEmergencyTools } from "./tools/emergency.js";
 import { registerRawTools } from "./tools/raw.js";
 import { Mode, ToolResult } from "./types.js";
 
@@ -43,8 +47,16 @@ const config = {
   enableRaw: process.env.WING_ENABLE_RAW === "1",
 };
 
-// Initialize components
-const driver: WingDriver = new FakeWingDriver();
+// Initialize driver based on config
+// Priority: native (libwing via Rust sidecar) > osc (UDP fallback) > fake (dev/testing)
+let driver: WingDriver;
+if (config.driver === "native") {
+  driver = new NativeDriver();
+} else if (config.driver === "osc") {
+  driver = new OscDriver();
+} else {
+  driver = new FakeWingDriver();
+}
 const riskEngine = new RiskEngine();
 const policyEngine = new PolicyEngine(config.mode, config.liveMode);
 const confirmationManager = new ConfirmationManager();
@@ -76,7 +88,11 @@ const viewTools = registerViewTools(driver);
 const processingTools = registerProcessingTools(driver, changePlanner);
 const groupTools = registerGroupTools(driver, changePlanner);
 const bulkTools = registerBulkTools(driver);
+const emergencyTools = registerEmergencyTools(driver, changePlanner);
 const rawTools = registerRawTools(driver, changePlanner);
+
+// Rate limiter: max 12 writes/min, 2s interval, 10s critical cooldown
+const rateLimiter = new RateLimiter(12, 2000, 10000);
 
 const allTools: Record<string, any> = {
   ...deviceTools,
@@ -93,6 +109,7 @@ const allTools: Record<string, any> = {
   ...processingTools,
   ...groupTools,
   ...bulkTools,
+  ...emergencyTools,
   // Raw tools only if enabled
   ...(config.enableRaw ? rawTools : {}),
 };
