@@ -39,6 +39,38 @@ import { registerEmergencyTools } from "./tools/emergency.js";
 import { registerRawTools } from "./tools/raw.js";
 import { Mode, ToolResult, RISK_MAP } from "./types.js";
 
+/** Runtime input validation for common numeric ranges and enums */
+function validateArgs(toolName: string, args: Record<string, unknown>): string | null {
+  const ch = args.channel as number | undefined;
+  const bus = args.bus as number | undefined;
+  const dca = args.dca as number | undefined;
+  const group = args.group as number | undefined;
+  const slot = args.slot as number | undefined;
+  const input = args.input as number | undefined;
+  const matrix = args.matrix as number | undefined;
+  const scene_index = args.scene_index as number | undefined;
+  const scope = args.scope as string | undefined;
+  const band = args.band as string | undefined;
+  const parameter = args.parameter as string | undefined;
+
+  if (ch !== undefined && (!Number.isInteger(ch) || ch < 1 || ch > 48)) return `channel must be 1-48, got ${ch}`;
+  if (bus !== undefined && (!Number.isInteger(bus) || bus < 1 || bus > 16)) return `bus must be 1-16, got ${bus}`;
+  if (dca !== undefined && (!Number.isInteger(dca) || dca < 1 || dca > 8)) return `dca must be 1-8, got ${dca}`;
+  if (group !== undefined && (!Number.isInteger(group) || group < 1 || group > 6)) return `group must be 1-6, got ${group}`;
+  if (slot !== undefined && (!Number.isInteger(slot) || slot < 1 || slot > 8)) return `slot must be 1-8, got ${slot}`;
+  if (input !== undefined && (!Number.isInteger(input) || input < 1 || input > 48)) return `input must be 1-48, got ${input}`;
+  if (matrix !== undefined && (!Number.isInteger(matrix) || matrix < 1 || matrix > 8)) return `matrix must be 1-8, got ${matrix}`;
+  if (scene_index !== undefined && (!Number.isInteger(scene_index) || scene_index < 0 || scene_index > 99)) return `scene_index must be 0-99, got ${scene_index}`;
+  if (scope !== undefined && !["all", "main_only", "channels_only"].includes(scope)) return `scope must be all/main_only/channels_only, got ${scope}`;
+  if (band !== undefined && !["high", "hi_mid", "lo_mid", "low"].includes(band)) return `band must be high/hi_mid/lo_mid/low, got ${band}`;
+  if (parameter !== undefined) {
+    const validParams = ["gain", "freq", "q", "threshold", "range", "attack", "hold", "release", "ratio"];
+    if (!validParams.includes(parameter)) return `parameter must be one of: ${validParams.join(", ")}, got ${parameter}`;
+  }
+
+  return null; // valid
+}
+
 // Configuration from environment
 const config = {
   mode: (process.env.WING_MODE as Mode) ?? "rehearsal_safe",
@@ -162,6 +194,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   if (!tool) {
     return {
       content: [{ type: "text", text: JSON.stringify({ ok: false, errors: [{ code: "PARAM_NOT_FOUND", message: `Tool ${toolName} not found.` }], human_summary: `工具 ${toolName} 未找到。` }) }],
+      isError: true,
+    };
+  }
+
+  // Runtime input validation
+  const validationError = validateArgs(toolName, toolArgs);
+  if (validationError) {
+    return {
+      content: [{ type: "text", text: JSON.stringify({ ok: false, errors: [{ code: "VALUE_OUT_OF_RANGE", message: validationError }], human_summary: `参数校验失败：${validationError}` }) }],
       isError: true,
     };
   }

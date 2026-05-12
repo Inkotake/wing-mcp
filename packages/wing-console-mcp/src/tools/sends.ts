@@ -101,7 +101,8 @@ export function registerSendTools(driver: WingDriver, changePlanner: ChangePlann
           path,
           newVal,
           args.reason,
-          args.confirmation_id
+          args.confirmation_id,
+          args.confirmation_text
         );
       },
     },

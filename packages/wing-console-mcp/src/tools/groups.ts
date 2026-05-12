@@ -110,7 +110,7 @@ export function registerGroupTools(driver: WingDriver, changePlanner: ChangePlan
         confirmation_text?: string;
       }): Promise<ToolResult> => {
         const newVal: WingValue = { type: "bool", value: args.mute };
-        return changePlanner.applyWrite("wing_dca_set_mute_apply", `/dca/${args.dca}/mute`, newVal, args.reason, args.confirmation_id);
+        return changePlanner.applyWrite("wing_dca_set_mute_apply", `/dca/${args.dca}/mute`, newVal, args.reason, args.confirmation_id, args.confirmation_text);
       },
     },
 
@@ -153,7 +153,7 @@ export function registerGroupTools(driver: WingDriver, changePlanner: ChangePlan
         const oldVal = await driver.getParam(`/dca/${args.dca}/fader`);
         const oldDb = oldVal.type === "float" ? oldVal.value : 0;
         const newVal: WingValue = { type: "float", value: oldDb + args.delta_db, unit: "dB" };
-        return changePlanner.applyWrite("wing_dca_adjust_fader_apply", `/dca/${args.dca}/fader`, newVal, args.reason, args.confirmation_id);
+        return changePlanner.applyWrite("wing_dca_adjust_fader_apply", `/dca/${args.dca}/fader`, newVal, args.reason, args.confirmation_id, args.confirmation_text);
       },
     },
 
@@ -218,7 +218,7 @@ export function registerGroupTools(driver: WingDriver, changePlanner: ChangePlan
         confirmation_text?: string;
       }): Promise<ToolResult> => {
         const newVal: WingValue = { type: "bool", value: args.mute };
-        return changePlanner.applyWrite("wing_mute_group_set_apply", `/mutegroup/${args.group}/mute`, newVal, args.reason, args.confirmation_id);
+        return changePlanner.applyWrite("wing_mute_group_set_apply", `/mutegroup/${args.group}/mute`, newVal, args.reason, args.confirmation_id, args.confirmation_text);
       },
     },
 
@@ -285,7 +285,7 @@ export function registerGroupTools(driver: WingDriver, changePlanner: ChangePlan
         const oldVal = await driver.getParam("/main/lr/fader");
         const oldDb = oldVal.type === "float" ? oldVal.value : 0;
         const newVal: WingValue = { type: "float", value: oldDb + args.delta_db, unit: "dB" };
-        return changePlanner.applyWrite("wing_main_adjust_fader_apply", "/main/lr/fader", newVal, args.reason, args.confirmation_id);
+        return changePlanner.applyWrite("wing_main_adjust_fader_apply", "/main/lr/fader", newVal, args.reason, args.confirmation_id, args.confirmation_text);
       },
     },
 
@@ -322,7 +322,7 @@ export function registerGroupTools(driver: WingDriver, changePlanner: ChangePlan
         confirmation_text?: string;
       }): Promise<ToolResult> => {
         const newVal: WingValue = { type: "bool", value: args.mute };
-        return changePlanner.applyWrite("wing_main_set_mute_apply", "/main/lr/mute", newVal, args.reason, args.confirmation_id);
+        return changePlanner.applyWrite("wing_main_set_mute_apply", "/main/lr/mute", newVal, args.reason, args.confirmation_id, args.confirmation_text);
       },
     },
 

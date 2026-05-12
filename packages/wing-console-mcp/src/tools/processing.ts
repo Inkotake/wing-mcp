@@ -105,7 +105,7 @@ export function registerProcessingTools(driver: WingDriver, changePlanner: Chang
         const path = `/${args.target}/eq/${args.band}/${args.parameter}`;
         const unit = args.parameter === "gain" ? "dB" : args.parameter === "freq" ? "Hz" : "";
         const newVal: WingValue = unit ? { type: "float", value: args.value, unit } : { type: "float", value: args.value };
-        return changePlanner.applyWrite("wing_eq_set_band_apply", path, newVal, args.reason, args.confirmation_id);
+        return changePlanner.applyWrite("wing_eq_set_band_apply", path, newVal, args.reason, args.confirmation_id, args.confirmation_text);
       },
     },
 
@@ -184,7 +184,7 @@ export function registerProcessingTools(driver: WingDriver, changePlanner: Chang
         const path = `/ch/${args.channel}/gate/${args.parameter}`;
         const unit = ["threshold", "range"].includes(args.parameter) ? "dB" : "ms";
         const newVal: WingValue = { type: "float", value: args.value, unit };
-        return changePlanner.applyWrite("wing_gate_set_apply", path, newVal, args.reason, args.confirmation_id);
+        return changePlanner.applyWrite("wing_gate_set_apply", path, newVal, args.reason, args.confirmation_id, args.confirmation_text);
       },
     },
 
@@ -263,7 +263,7 @@ export function registerProcessingTools(driver: WingDriver, changePlanner: Chang
         const path = `/${args.target}/comp/${args.parameter}`;
         const unit = args.parameter === "threshold" ? "dB" : args.parameter === "ratio" ? ":1" : args.parameter === "gain" ? "dB" : "ms";
         const newVal: WingValue = { type: "float", value: args.value, unit };
-        return changePlanner.applyWrite("wing_comp_set_apply", path, newVal, args.reason, args.confirmation_id);
+        return changePlanner.applyWrite("wing_comp_set_apply", path, newVal, args.reason, args.confirmation_id, args.confirmation_text);
       },
     },
 
@@ -362,7 +362,7 @@ export function registerProcessingTools(driver: WingDriver, changePlanner: Chang
       }): Promise<ToolResult> => {
         const path = `/fx/${args.slot}/model`;
         const newVal: WingValue = { type: "string", value: args.model };
-        return changePlanner.applyWrite("wing_fx_slot_set_model_apply", path, newVal, args.reason, args.confirmation_id);
+        return changePlanner.applyWrite("wing_fx_slot_set_model_apply", path, newVal, args.reason, args.confirmation_id, args.confirmation_text);
       },
     },
   };

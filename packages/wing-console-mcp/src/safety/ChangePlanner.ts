@@ -1,7 +1,7 @@
 import { WingDriver } from "../drivers/WingDriver.js";
 import { PolicyEngine } from "./PolicyEngine.js";
 import { RiskEngine } from "./RiskEngine.js";
-import { ConfirmationManager } from "./ConfirmationManager.js";
+import { ConfirmationManager, valuesEqual } from "./ConfirmationManager.js";
 import { AuditLogger } from "./AuditLogger.js";
 import { Mode, ToolResult, WingValue } from "../types.js";
 
@@ -195,8 +195,8 @@ export class ChangePlanner {
       readbackValue = currentValue;
     }
 
-    // Check readback match
-    const match = JSON.stringify(readbackValue) === JSON.stringify(requestedValue);
+    // Check readback match (tolerant float comparison)
+    const match = valuesEqual(readbackValue, requestedValue);
     const auditRecord = this.auditLogger.log({
       mode: this.mode,
       risk,

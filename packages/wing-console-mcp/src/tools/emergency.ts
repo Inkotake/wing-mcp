@@ -41,23 +41,19 @@ export function registerEmergencyTools(driver: WingDriver, changePlanner: Change
         const scope = args.scope ?? "all";
         const paths: string[] = [];
 
-        if (scope === "main_only" || scope === "all") {
-          paths.push("/main/lr/mute");
-        }
+        // Always include Main LR as the primary emergency target for prepare
+        paths.push("/main/lr/mute");
         if (scope === "channels_only" || scope === "all") {
           for (let ch = 1; ch <= 48; ch++) paths.push(`/ch/${ch}/mute`);
           for (let b = 1; b <= 16; b++) paths.push(`/bus/${b}/mute`);
           for (let d = 1; d <= 8; d++) paths.push(`/dca/${d}/mute`);
         }
 
-        emergencyActive = true;
-        emergencyTimestamp = new Date().toISOString();
-
-        // Use the first path for the prepare flow
+        // DO NOT set emergencyActive here — only in apply
         const newVal: WingValue = { type: "bool", value: true };
         return changePlanner.prepareWrite(
           "wing_emergency_stop",
-          paths[0],
+          "/main/lr/mute",  // canonical target for all emergency scopes
           newVal,
           `[EMERGENCY] ${args.reason} — scope: ${scope} — ${paths.length} targets will be muted`
         );
@@ -82,7 +78,7 @@ export function registerEmergencyTools(driver: WingDriver, changePlanner: Change
       }): Promise<ToolResult> => {
         const scope = args.scope ?? "all";
 
-        // Validate confirmation ticket using changePlanner (respects emergency bypass)
+        // Validate confirmation ticket via changePlanner (uses Main LR as canonical target)
         const muteVal: WingValue = { type: "bool", value: true };
         const validationResult = await changePlanner.applyWrite(
           "wing_emergency_stop_apply",
@@ -96,7 +92,11 @@ export function registerEmergencyTools(driver: WingDriver, changePlanner: Change
           return validationResult;
         }
 
-        // Now mute all targets
+        // Emergency is now active
+        emergencyActive = true;
+        emergencyTimestamp = new Date().toISOString();
+
+        // Compute the full target list to mute
         const paths: string[] = [];
         if (scope === "main_only" || scope === "all") paths.push("/main/lr/mute");
         if (scope === "channels_only" || scope === "all") {
