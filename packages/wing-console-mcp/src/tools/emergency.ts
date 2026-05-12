@@ -66,7 +66,7 @@ export function registerEmergencyTools(driver: WingDriver, changePlanner: Change
 
     wing_emergency_stop_apply: {
       description:
-        "EMERGENCY APPLY: Execute the prepared emergency stop. Mutes all specified targets. This is the ONLY apply tool that works in read_only mode. Risk: critical. Write: prepare/apply/readback/audit.",
+        "EMERGENCY APPLY: Execute the prepared emergency stop. Mutes all specified targets. Risk: critical. Write: prepare/apply/readback/audit.",
       inputSchema: {
         type: "object" as const,
         properties: {
@@ -80,8 +80,23 @@ export function registerEmergencyTools(driver: WingDriver, changePlanner: Change
         reason: string; scope?: string; confirmation_id: string;
       }): Promise<ToolResult> => {
         const scope = args.scope ?? "all";
-        const paths: string[] = [];
 
+        // Validate confirmation ticket using changePlanner (respects emergency bypass)
+        const muteVal: WingValue = { type: "bool", value: true };
+        const validationResult = await changePlanner.applyWrite(
+          "wing_emergency_stop_apply",
+          "/main/lr/mute",
+          muteVal,
+          `[EMERGENCY] ${args.reason} — scope: ${scope}`,
+          args.confirmation_id
+        );
+
+        if (!validationResult.ok) {
+          return validationResult;
+        }
+
+        // Now mute all targets
+        const paths: string[] = [];
         if (scope === "main_only" || scope === "all") paths.push("/main/lr/mute");
         if (scope === "channels_only" || scope === "all") {
           for (let ch = 1; ch <= 48; ch++) paths.push(`/ch/${ch}/mute`);
@@ -89,17 +104,15 @@ export function registerEmergencyTools(driver: WingDriver, changePlanner: Change
           for (let d = 1; d <= 8; d++) paths.push(`/dca/${d}/mute`);
         }
 
-        // Apply mute to all targets
         const results: string[] = [];
         const errors: string[] = [];
-        const muteVal: WingValue = { type: "bool", value: true };
 
         for (const path of paths) {
           try {
             await driver.setParam(path, muteVal);
             const rb = await driver.getParam(path);
             if (rb.type === "bool" && rb.value === true) {
-              results.push(`${path}: muted ✓`);
+              results.push(`${path}: muted`);
             } else {
               errors.push(`${path}: readback mismatch`);
             }
@@ -108,7 +121,8 @@ export function registerEmergencyTools(driver: WingDriver, changePlanner: Change
           }
         }
 
-        emergencyActive = false;
+        // Only clear emergency if ALL targets muted successfully
+        emergencyActive = errors.length > 0;
 
         return {
           ok: errors.length === 0,
@@ -119,9 +133,12 @@ export function registerEmergencyTools(driver: WingDriver, changePlanner: Change
             results: results.slice(0, 10),
             errors: errors.slice(0, 10),
           },
+          warnings: errors.length > 0
+            ? [{ code: "READBACK_MISMATCH" as const, message: `${errors.length} targets failed to mute` }]
+            : undefined,
           human_summary: errors.length === 0
             ? `🚨 紧急停止完成: ${results.length} 个目标已静音 (scope: ${scope})`
-            : `🚨 紧急停止部分完成: ${results.length} 成功, ${errors.length} 失败`,
+            : `🚨 紧急停止部分完成: ${results.length} 成功, ${errors.length} 失败 — 紧急状态保持激活`,
         };
       },
     },

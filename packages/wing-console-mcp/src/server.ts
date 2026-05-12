@@ -37,7 +37,7 @@ import { registerGroupTools } from "./tools/groups.js";
 import { registerBulkTools } from "./tools/bulk.js";
 import { registerEmergencyTools } from "./tools/emergency.js";
 import { registerRawTools } from "./tools/raw.js";
-import { Mode, ToolResult } from "./types.js";
+import { Mode, ToolResult, RISK_MAP } from "./types.js";
 
 // Configuration from environment
 const config = {
@@ -166,8 +166,32 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     };
   }
 
+  // Rate limiting for write tools
+  const isEmergency = toolName.startsWith("wing_emergency");
+  const isWrite = toolName.includes("_apply") || toolName.includes("_set_") || toolName.includes("_adjust_");
+  if (isWrite && !isEmergency) {
+    const rateCheck = rateLimiter.check(toolName, false);
+    if (!rateCheck.allowed) {
+      return {
+        content: [{ type: "text", text: JSON.stringify({
+          ok: false,
+          errors: [{ code: "POLICY_DENIED", message: rateCheck.reason ?? "Rate limit exceeded" }],
+          human_summary: `速率限制：${rateCheck.reason ?? "too many requests"}`,
+          data: { retryAfterMs: rateCheck.retryAfterMs },
+        } satisfies ToolResult) }],
+        isError: true,
+      };
+    }
+  }
+
   try {
     const result: ToolResult = await tool.handler(toolArgs, toolContext);
+
+    // Record write for rate limiting
+    if (isWrite) {
+      const risk = RISK_MAP[toolName] ?? "none";
+      if (result.ok) rateLimiter.record(toolName, risk);
+    }
 
     return {
       content: [

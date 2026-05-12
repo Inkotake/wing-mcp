@@ -101,7 +101,7 @@ export function registerBulkTools(driver: WingDriver) {
                   chData[key] = valueToPlain(val);
                 }
                 channels.push(chData);
-              } catch { break; }
+              } catch { continue; }
             }
             dump.channels = channels;
           }
@@ -116,7 +116,7 @@ export function registerBulkTools(driver: WingDriver) {
                   bData[key] = valueToPlain(val);
                 }
                 buses.push(bData);
-              } catch { break; }
+              } catch { continue; }
             }
             dump.buses = buses;
           }
@@ -127,7 +127,7 @@ export function registerBulkTools(driver: WingDriver) {
               try {
                 const node = await driver.getNode(`/dca/${d}`);
                 dcas.push({ dca: d, ...Object.fromEntries(Object.entries(node).map(([k, v]) => [k, valueToPlain(v)])) });
-              } catch { break; }
+              } catch { continue; }
             }
             dump.dcas = dcas;
           }

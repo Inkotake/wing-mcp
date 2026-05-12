@@ -47,7 +47,9 @@ export class ConfirmationManager {
       return { valid: false, error: "Confirmation has expired. Please re-prepare the change." };
     }
 
-    if (ticket.tool !== expectedTool) {
+    // Normalize tool names: strip _prepare/_apply suffix so prepare/apply pairs match
+    const normalize = (t: string) => t.replace(/_(prepare|apply)$/, "");
+    if (normalize(ticket.tool) !== normalize(expectedTool)) {
       return {
         valid: false,
         error: `Tool mismatch: ticket was for ${ticket.tool}, but ${expectedTool} was called.`,

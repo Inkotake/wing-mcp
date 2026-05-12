@@ -46,7 +46,7 @@ export function registerViewTools(driver: WingDriver) {
               if (fader.type === "float" && fader.value < -60) {
                 lowFaderChannels.push(ch);
               }
-            } catch { break; }
+            } catch { continue; }
           }
 
           if (mutedChannels.length > 0) {
@@ -165,7 +165,7 @@ export function registerViewTools(driver: WingDriver) {
                 }
 
                 channels.push(chData);
-              } catch { break; }
+              } catch { continue; }
             }
             result.channels = channels;
           }
@@ -184,7 +184,7 @@ export function registerViewTools(driver: WingDriver) {
                   mute: mute.type === "bool" ? mute.value : false,
                   fader: fader.type === "float" ? fader.value : 0,
                 });
-              } catch { break; }
+              } catch { continue; }
             }
             result.buses = buses;
           }
@@ -279,7 +279,7 @@ export function registerViewTools(driver: WingDriver) {
                 else if (val.type === "int") chData[shortKey] = val.value;
               }
               channelsSnap.push(chData);
-            } catch { break; }
+            } catch { continue; }
           }
 
           for (let b = 1; b <= 16; b++) {
@@ -293,7 +293,7 @@ export function registerViewTools(driver: WingDriver) {
                 else if (val.type === "string") bData[shortKey] = val.value;
               }
               busesSnap.push(bData);
-            } catch { break; }
+            } catch { continue; }
           }
 
           try {
@@ -315,7 +315,7 @@ export function registerViewTools(driver: WingDriver) {
                 gain: gain.type === "float" ? `${gain.value.toFixed(1)} dB` : "??",
                 phantom: phantom.type === "bool" ? phantom.value : false,
               });
-            } catch { break; }
+            } catch { continue; }
           }
 
           // Meters if requested

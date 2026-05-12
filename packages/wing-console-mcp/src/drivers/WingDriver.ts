@@ -158,7 +158,7 @@ export class FakeWingDriver implements WingDriver {
       [`/ch/${ch}/comp/attack`, { type: "float", value: 10.0, unit: "ms" }],
       [`/ch/${ch}/comp/release`, { type: "float", value: 100.0, unit: "ms" }],
       [`/ch/${ch}/comp/gain`, { type: "float", value: 0.0, unit: "dB" }],
-      // Sends to buses 1-8 (commonly used)
+      // Sends to all 16 buses
       [`/ch/${ch}/send/1/level`, { type: "float", value: -99.0, unit: "dB" }],
       [`/ch/${ch}/send/2/level`, { type: "float", value: -99.0, unit: "dB" }],
       [`/ch/${ch}/send/3/level`, { type: "float", value: -99.0, unit: "dB" }],
@@ -167,6 +167,14 @@ export class FakeWingDriver implements WingDriver {
       [`/ch/${ch}/send/6/level`, { type: "float", value: -99.0, unit: "dB" }],
       [`/ch/${ch}/send/7/level`, { type: "float", value: -99.0, unit: "dB" }],
       [`/ch/${ch}/send/8/level`, { type: "float", value: -99.0, unit: "dB" }],
+      [`/ch/${ch}/send/9/level`, { type: "float", value: -99.0, unit: "dB" }],
+      [`/ch/${ch}/send/10/level`, { type: "float", value: -99.0, unit: "dB" }],
+      [`/ch/${ch}/send/11/level`, { type: "float", value: -99.0, unit: "dB" }],
+      [`/ch/${ch}/send/12/level`, { type: "float", value: -99.0, unit: "dB" }],
+      [`/ch/${ch}/send/13/level`, { type: "float", value: -99.0, unit: "dB" }],
+      [`/ch/${ch}/send/14/level`, { type: "float", value: -99.0, unit: "dB" }],
+      [`/ch/${ch}/send/15/level`, { type: "float", value: -99.0, unit: "dB" }],
+      [`/ch/${ch}/send/16/level`, { type: "float", value: -99.0, unit: "dB" }],
     ];
   }
 
