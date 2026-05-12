@@ -164,7 +164,7 @@ export function registerEmergencyTools(driver: WingDriver, changePlanner: Change
 
     wing_emergency_reset: {
       description:
-        "Reset emergency state and unmute all targets. HIGH risk — restores audio after an emergency stop. Requires confirmation. Write: prepare/apply/readback/audit.",
+        "Reset emergency state and unmute all targets (Main LR + all channels/buses/DCAs that were muted). HIGH risk — restores audio. Requires confirmation. Write: prepare/apply/readback/audit.",
       inputSchema: {
         type: "object" as const,
         properties: {
@@ -178,8 +178,72 @@ export function registerEmergencyTools(driver: WingDriver, changePlanner: Change
           "wing_emergency_reset",
           "/main/lr/mute",
           newVal,
-          `[EMERGENCY RESET] ${args.reason}`
+          `[EMERGENCY RESET] ${args.reason} — will unmute Main LR + all channels/buses/DCAs`
         );
+      },
+    },
+
+    wing_emergency_reset_apply: {
+      description: "Apply emergency reset: unmute Main LR and all channels/buses/DCAs. HIGH risk. Write: prepare/apply/readback/audit.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          reason: { type: "string" },
+          confirmation_id: { type: "string" },
+          confirmation_text: { type: "string" },
+        },
+        required: ["reason", "confirmation_id"],
+      },
+      handler: async (args: {
+        reason: string; confirmation_id: string; confirmation_text?: string;
+      }): Promise<ToolResult> => {
+        const unmuteVal: WingValue = { type: "bool", value: false };
+
+        // Validate the Main LR unmute via changePlanner
+        const validationResult = await changePlanner.applyWrite(
+          "wing_emergency_reset_apply",
+          "/main/lr/mute",
+          unmuteVal,
+          `[EMERGENCY RESET] ${args.reason}`,
+          args.confirmation_id,
+          args.confirmation_text
+        );
+
+        if (!validationResult.ok) return validationResult;
+
+        // Unmute all targets
+        const paths = ["/main/lr/mute"];
+        for (let ch = 1; ch <= 48; ch++) paths.push(`/ch/${ch}/mute`);
+        for (let b = 1; b <= 16; b++) paths.push(`/bus/${b}/mute`);
+        for (let d = 1; d <= 8; d++) paths.push(`/dca/${d}/mute`);
+
+        const results: string[] = [];
+        const errors: string[] = [];
+
+        for (const path of paths) {
+          try {
+            await driver.setParam(path, unmuteVal);
+            const rb = await driver.getParam(path);
+            if (rb.type === "bool" && rb.value === false) {
+              results.push(`${path}: unmuted`);
+            } else {
+              errors.push(`${path}: readback mismatch`);
+            }
+          } catch (e: any) {
+            errors.push(`${path}: ${e.message}`);
+          }
+        }
+
+        emergencyActive = errors.length > 0;
+        emergencyTimestamp = null;
+
+        return {
+          ok: errors.length === 0,
+          data: { targets_unmuted: results.length, targets_failed: errors.length },
+          human_summary: errors.length === 0
+            ? `✅ 紧急状态已解除: ${results.length} 个目标已取消静音`
+            : `⚠️ 紧急状态部分解除: ${results.length} 成功, ${errors.length} 失败 — 紧急状态保持激活`,
+        };
       },
     },
   };

@@ -276,6 +276,12 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => ({
       mimeType: "application/json",
     },
     {
+      uri: "wing://policy/current",
+      name: "Current Safety Policy",
+      description: "Active mode, risk policy, and configuration",
+      mimeType: "application/json",
+    },
+    {
       uri: "wing://snapshot",
       name: "Full Console Snapshot",
       description: "Complete current mixer state snapshot",
