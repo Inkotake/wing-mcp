@@ -118,6 +118,24 @@ export class FakeWingDriver implements WingDriver {
       ["/recorder/transport", { type: "string", value: "stopped" }],
     ]);
 
+    // Independent meter signal params (separate from fader/mute state)
+    for (let ch = 1; ch <= 48; ch++) {
+      add([
+        [`/ch/${ch}/meter/input`, { type: "float", value: -18.0, unit: "dBFS" }],
+        [`/ch/${ch}/meter/pre_fader`, { type: "float", value: -18.0, unit: "dBFS" }],
+        [`/ch/${ch}/meter/post_fader`, { type: "float", value: -18.0, unit: "dBFS" }],
+      ]);
+    }
+    for (let b = 1; b <= 16; b++) {
+      add([
+        [`/bus/${b}/meter/post_fader`, { type: "float", value: -18.0, unit: "dBFS" }],
+      ]);
+    }
+    add([
+      ["/main/lr/meter/left", { type: "float", value: -18.0, unit: "dBFS" }],
+      ["/main/lr/meter/right", { type: "float", value: -18.0, unit: "dBFS" }],
+    ]);
+
     for (const [path, value] of baseParams) {
       this.params.set(path, value);
     }
@@ -261,18 +279,77 @@ export class FakeWingDriver implements WingDriver {
     }
   }
 
+  // Fault profiles for simulating specific no-sound scenarios
+  private activeProfile: string = "normal";
+
+  setProfile(profile: string): void {
+    this.activeProfile = profile;
+    switch (profile) {
+      case "no_input_ch1":
+        this.params.set("/ch/1/meter/input", { type: "float", value: -120.0, unit: "dBFS" });
+        this.params.set("/ch/1/meter/pre_fader", { type: "float", value: -120.0, unit: "dBFS" });
+        break;
+      case "muted_ch1":
+        this.params.set("/ch/1/mute", { type: "bool", value: true });
+        break;
+      case "fader_down_ch1":
+        this.params.set("/ch/1/fader", { type: "float", value: -90.0, unit: "dB" });
+        break;
+      case "gate_closed_ch1":
+        this.params.set("/ch/1/gate/threshold", { type: "float", value: 10.0, unit: "dB" });
+        this.params.set("/ch/1/gate/on", { type: "bool", value: true });
+        break;
+      case "main_muted":
+        this.params.set("/main/lr/mute", { type: "bool", value: true });
+        break;
+      case "routing_wrong":
+        this.params.set("/ch/1/source", { type: "string", value: "None" });
+        break;
+      case "normal":
+      default:
+        // Reset to default values is handled by re-init
+        break;
+    }
+  }
+
+  getActiveProfile(): string {
+    return this.activeProfile;
+  }
+
   async meterRead(targets: string[], windowMs: number): Promise<MeterFrame> {
     if (!this.connected) throw new Error("DEVICE_DISCONNECTED");
     this.maybeInjectFault();
     const meters = targets.map((target) => {
+      // Check for independent meter params first (input/pre/post levels)
+      let meterPath = target;
+      // Map fader paths to their corresponding meter paths
+      if (target.match(/^\/ch\/\d+\/fader$/)) {
+        meterPath = target.replace(/\/fader$/, "/meter/post_fader");
+      } else if (target.match(/^\/bus\/\d+\/fader$/)) {
+        meterPath = target.replace(/\/fader$/, "/meter/post_fader");
+      } else if (target === "/main/lr/fader") {
+        meterPath = "/main/lr/meter/left";
+      }
+      const meterParam = this.params.get(meterPath);
+      // If meter param exists, use it; otherwise fall back to fader-based computation
+      if (meterParam?.type === "float") {
+        const level = (meterParam.value as number);
+        const hasSignal = level > -90;
+        return {
+          target,
+          rmsDbfs: hasSignal ? level + (Math.random() - 0.5) * 3 : -120.0,
+          peakDbfs: hasSignal ? level + 3 + Math.random() * 3 : -120.0,
+          present: hasSignal,
+        };
+      }
+      // Fallback: use fader param value
       const param = this.params.get(target);
-      const hasSignal =
-        param?.type === "float" && param.value > -90 && !this.params.get(target.replace(/\/fader$/, "/mute"))?.value;
+      const hasSignal = param?.type === "float" && (param.value as number) > -90;
       return {
         target,
         rmsDbfs: hasSignal ? -18.0 + Math.random() * 6 : -120.0,
         peakDbfs: hasSignal ? -12.0 + Math.random() * 6 : -120.0,
-        present: hasSignal ?? false,
+        present: hasSignal,
       };
     });
     return { timestamp: new Date().toISOString(), meters };

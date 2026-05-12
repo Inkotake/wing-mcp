@@ -78,6 +78,7 @@ export function registerEmergencyTools(driver: WingDriver, changePlanner: Change
       },
       handler: async (args: {
         reason: string; scope?: string; confirmation_id: string;
+        confirmation_text?: string;
       }): Promise<ToolResult> => {
         const scope = args.scope ?? "all";
 
@@ -88,7 +89,7 @@ export function registerEmergencyTools(driver: WingDriver, changePlanner: Change
           "/main/lr/mute",
           muteVal,
           `[EMERGENCY] ${args.reason} — scope: ${scope}`,
-          args.confirmation_id
+          args.confirmation_id, args.confirmation_text
         );
 
         if (!validationResult.ok) {

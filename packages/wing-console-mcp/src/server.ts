@@ -166,10 +166,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     };
   }
 
-  // Rate limiting for write tools
+  // Rate limiting: only count actual apply writes, not prepare/read ops
   const isEmergency = toolName.startsWith("wing_emergency");
-  const isWrite = toolName.includes("_apply") || toolName.includes("_set_") || toolName.includes("_adjust_");
-  if (isWrite && !isEmergency) {
+  const isApplyWrite = toolName.endsWith("_apply");
+  if (isApplyWrite && !isEmergency) {
     const rateCheck = rateLimiter.check(toolName, false);
     if (!rateCheck.allowed) {
       return {
@@ -188,7 +188,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const result: ToolResult = await tool.handler(toolArgs, toolContext);
 
     // Record write for rate limiting
-    if (isWrite) {
+    if (isApplyWrite) {
       const risk = RISK_MAP[toolName] ?? "none";
       if (result.ok) rateLimiter.record(toolName, risk);
     }

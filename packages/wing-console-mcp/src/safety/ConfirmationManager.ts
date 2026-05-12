@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
-import { ConfirmationTicket, Risk, WingValue } from "../types.js";
+import { ConfirmationTicket, Risk } from "../types.js";
 
 const CONFIRMATION_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -34,7 +34,10 @@ export class ConfirmationManager {
   validateTicket(
     ticketId: string,
     expectedTool: string,
-    expectedTarget: string
+    expectedTarget: string,
+    requestedValue?: unknown,
+    confirmationText?: string,
+    currentOldValue?: unknown,
   ): { valid: boolean; error?: string; ticket?: ConfirmationTicket } {
     const ticket = this.tickets.get(ticketId);
 
@@ -47,7 +50,7 @@ export class ConfirmationManager {
       return { valid: false, error: "Confirmation has expired. Please re-prepare the change." };
     }
 
-    // Normalize tool names: strip _prepare/_apply suffix so prepare/apply pairs match
+    // Normalize tool names: strip _prepare/_apply suffix so pairs match
     const normalize = (t: string) => t.replace(/_(prepare|apply)$/, "");
     if (normalize(ticket.tool) !== normalize(expectedTool)) {
       return {
@@ -61,6 +64,51 @@ export class ConfirmationManager {
         valid: false,
         error: `Target mismatch: ticket was for ${ticket.target}, but ${expectedTarget} was called.`,
       };
+    }
+
+    // Validate requestedValue hasn't changed from prepare to apply
+    if (requestedValue !== undefined) {
+      const ticketReq = JSON.stringify(ticket.requestedValue);
+      const applyReq = JSON.stringify(requestedValue);
+      if (ticketReq !== applyReq) {
+        return {
+          valid: false,
+          error: `Requested value mismatch: prepared ${ticketReq}, but apply wants ${applyReq}. Re-prepare the change.`,
+        };
+      }
+    }
+
+    // Detect material state change between prepare and apply
+    if (currentOldValue !== undefined) {
+      const ticketOld = JSON.stringify(ticket.oldValue);
+      const currentOld = JSON.stringify(currentOldValue);
+      if (ticketOld !== currentOld) {
+        return {
+          valid: false,
+          error: `State changed since prepare: value was ${ticketOld}, now ${currentOld}. Re-prepare the change.`,
+        };
+      }
+    }
+
+    // For high/critical risk, validate confirmation text
+    if (ticket.risk === "high" || ticket.risk === "critical") {
+      if (!confirmationText || confirmationText.trim().length === 0) {
+        return {
+          valid: false,
+          error: `Confirmation text required for ${ticket.risk} risk actions.`,
+        };
+      }
+      // Critical must contain key risk-acknowledgment phrases
+      if (ticket.risk === "critical") {
+        const text = confirmationText.toLowerCase();
+        const hasAck = text.includes("确认") || text.includes("confirm") || text.includes("我知道") || text.includes("acknowledge");
+        if (!hasAck) {
+          return {
+            valid: false,
+            error: `Critical actions require risk acknowledgment. Say: "${ticket.exactConfirmationText}"`,
+          };
+        }
+      }
     }
 
     return { valid: true, ticket };

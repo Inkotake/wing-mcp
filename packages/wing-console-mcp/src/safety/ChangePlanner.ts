@@ -111,14 +111,15 @@ export class ChangePlanner {
     target: string,
     requestedValue: WingValue,
     reason: string,
-    confirmationId: string | undefined
+    confirmationId: string | undefined,
+    confirmationText?: string,
   ): Promise<ToolResult> {
     const risk = this.riskEngine.classify(tool, target);
 
-    // Read old state
-    let oldValue: WingValue;
+    // Read current state (for old-value tracking AND state drift detection)
+    let currentValue: WingValue;
     try {
-      oldValue = await this.driver.getParam(target);
+      currentValue = await this.driver.getParam(target);
     } catch (e: any) {
       return {
         ok: false,
@@ -137,7 +138,12 @@ export class ChangePlanner {
         };
       }
 
-      const validation = this.confirmationManager.validateTicket(confirmationId, tool, target);
+      const validation = this.confirmationManager.validateTicket(
+        confirmationId, tool, target,
+        requestedValue,             // check value hasn't changed from prepare
+        confirmationText,           // validate confirmation text for high/critical
+        currentValue,               // detect material state change since prepare
+      );
       if (!validation.valid) {
         return {
           ok: false,
@@ -148,7 +154,7 @@ export class ChangePlanner {
     }
 
     // Policy check
-    const decision = this.policyEngine.decide({ tool, target, oldValue, requestedValue, risk, reason });
+    const decision = this.policyEngine.decide({ tool, target, oldValue: currentValue, requestedValue, risk, reason });
     if (!decision.allowed) {
       return {
         ok: false,
@@ -167,10 +173,10 @@ export class ChangePlanner {
         tool,
         target,
         reason,
-        oldValue,
-        requestedValue: requestedValue,
-        readbackValue: oldValue,
-        confirmationText: confirmationId,
+        oldValue: currentValue,
+        requestedValue,
+        readbackValue: currentValue,
+        confirmationText: confirmationText ?? confirmationId,
         result: "failed",
         driver: this.driver.kind,
       });
@@ -186,7 +192,7 @@ export class ChangePlanner {
     try {
       readbackValue = await this.driver.getParam(target);
     } catch {
-      readbackValue = oldValue;
+      readbackValue = currentValue;
     }
 
     // Check readback match
@@ -197,10 +203,10 @@ export class ChangePlanner {
       tool,
       target,
       reason,
-      oldValue,
+      oldValue: currentValue,
       requestedValue,
       readbackValue,
-      confirmationText: confirmationId,
+      confirmationText: confirmationText ?? confirmationId,
       result: match ? "success" : "readback_mismatch",
       driver: this.driver.kind,
     });
@@ -219,16 +225,16 @@ export class ChangePlanner {
             message: `回读值 ${JSON.stringify(readbackValue)} 与目标值 ${JSON.stringify(requestedValue)} 不匹配`,
           },
         ],
-        data: { oldValue, requestedValue, readbackValue, auditId: auditRecord.id },
-        human_summary: `写入后回读不匹配！旧值: ${JSON.stringify(oldValue)}，目标: ${JSON.stringify(requestedValue)}，回读: ${JSON.stringify(readbackValue)}。审计ID: ${auditRecord.id}`,
+        data: { oldValue: currentValue, requestedValue, readbackValue, auditId: auditRecord.id },
+        human_summary: `写入后回读不匹配！旧值: ${JSON.stringify(currentValue)}，目标: ${JSON.stringify(requestedValue)}，回读: ${JSON.stringify(readbackValue)}。审计ID: ${auditRecord.id}`,
       };
     }
 
     return {
       ok: true,
-      data: { oldValue, requestedValue, readbackValue, auditId: auditRecord.id },
+      data: { oldValue: currentValue, requestedValue, readbackValue, auditId: auditRecord.id },
       audit_id: auditRecord.id,
-      human_summary: `已完成：${target} 从 ${formatValue(oldValue)} 调到 ${formatValue(requestedValue)}；WING 回读为 ${formatValue(readbackValue)}。审计编号: ${auditRecord.id}`,
+      human_summary: `已完成：${target} 从 ${formatValue(currentValue)} 调到 ${formatValue(requestedValue)}；WING 回读为 ${formatValue(readbackValue)}。审计编号: ${auditRecord.id}`,
     };
   }
 }

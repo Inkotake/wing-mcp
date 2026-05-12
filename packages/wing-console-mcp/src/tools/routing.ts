@@ -109,6 +109,7 @@ export function registerRoutingTools(driver: WingDriver, changePlanner: ChangePl
         destination: string;
         reason: string;
         confirmation_id: string;
+        confirmation_text?: string;
       }): Promise<ToolResult> => {
         const path = `/${args.target}`;
         const newVal: WingValue = { type: "string", value: args.destination };
@@ -117,7 +118,7 @@ export function registerRoutingTools(driver: WingDriver, changePlanner: ChangePl
           path,
           newVal,
           args.reason,
-          args.confirmation_id
+          args.confirmation_id, args.confirmation_text
         );
       },
     },

@@ -135,6 +135,7 @@ export function registerChannelTools(driver: WingDriver, changePlanner: ChangePl
           delta_db: { type: "number", description: "Fader change (must match prepare)." },
           reason: { type: "string", description: "Why this adjustment is needed." },
           confirmation_id: { type: "string", description: "Confirmation ID from prepare step." },
+          confirmation_text: { type: "string", description: "Exact confirmation text spoken/typed by the user. Required for high/critical risk actions." },
         },
         required: ["channel", "delta_db", "reason", "confirmation_id"],
       },
@@ -143,6 +144,7 @@ export function registerChannelTools(driver: WingDriver, changePlanner: ChangePl
         delta_db: number;
         reason: string;
         confirmation_id: string;
+        confirmation_text?: string;
       }): Promise<ToolResult> => {
         const path = `/ch/${args.channel}/fader`;
         const oldVal = await driver.getParam(path);
@@ -153,7 +155,8 @@ export function registerChannelTools(driver: WingDriver, changePlanner: ChangePl
           path,
           newVal,
           args.reason,
-          args.confirmation_id
+          args.confirmation_id,
+          args.confirmation_text
         );
       },
     },
@@ -196,6 +199,7 @@ export function registerChannelTools(driver: WingDriver, changePlanner: ChangePl
           mute: { type: "boolean", description: "True to mute (must match prepare)." },
           reason: { type: "string", description: "Why this mute change is needed." },
           confirmation_id: { type: "string", description: "Confirmation ID from prepare step." },
+          confirmation_text: { type: "string", description: "Exact confirmation text spoken/typed by the user. Required for high/critical risk actions." },
         },
         required: ["channel", "mute", "reason", "confirmation_id"],
       },
@@ -204,6 +208,7 @@ export function registerChannelTools(driver: WingDriver, changePlanner: ChangePl
         mute: boolean;
         reason: string;
         confirmation_id: string;
+        confirmation_text?: string;
       }): Promise<ToolResult> => {
         const path = `/ch/${args.channel}/mute`;
         const newVal: WingValue = { type: "bool", value: args.mute };
@@ -212,7 +217,8 @@ export function registerChannelTools(driver: WingDriver, changePlanner: ChangePl
           path,
           newVal,
           args.reason,
-          args.confirmation_id
+          args.confirmation_id,
+          args.confirmation_text
         );
       },
     },

@@ -78,6 +78,7 @@ export function registerHeadampTools(driver: WingDriver, changePlanner: ChangePl
         gain_db: number;
         reason: string;
         confirmation_id: string;
+        confirmation_text?: string;
       }): Promise<ToolResult> => {
         const path = `/headamp/local/${args.input}/gain`;
         const newVal: WingValue = { type: "float", value: args.gain_db, unit: "dB" };
@@ -86,7 +87,7 @@ export function registerHeadampTools(driver: WingDriver, changePlanner: ChangePl
           path,
           newVal,
           args.reason,
-          args.confirmation_id
+          args.confirmation_id, args.confirmation_text
         );
       },
     },
@@ -132,6 +133,7 @@ export function registerHeadampTools(driver: WingDriver, changePlanner: ChangePl
         enable: boolean;
         reason: string;
         confirmation_id: string;
+        confirmation_text?: string;
       }): Promise<ToolResult> => {
         const path = `/headamp/local/${args.input}/phantom`;
         const newVal: WingValue = { type: "bool", value: args.enable };
@@ -140,7 +142,7 @@ export function registerHeadampTools(driver: WingDriver, changePlanner: ChangePl
           path,
           newVal,
           args.reason,
-          args.confirmation_id
+          args.confirmation_id, args.confirmation_text
         );
       },
     },

@@ -240,6 +240,7 @@ export function registerDiagnosisTools(driver: WingDriver, changePlanner: Change
         target_value: any;
         fix_description: string;
         confirmation_id: string;
+        confirmation_text?: string;
       }): Promise<ToolResult> => {
         const session = sessions.get(args.session_id);
         if (!session) {
@@ -251,7 +252,7 @@ export function registerDiagnosisTools(driver: WingDriver, changePlanner: Change
           args.target_path,
           args.target_value as WingValue,
           `[Diagnosis ${session.id}] ${args.fix_description}`,
-          args.confirmation_id
+          args.confirmation_id, args.confirmation_text
         );
         if (result.ok) {
           session.state = "verify";

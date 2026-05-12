@@ -80,6 +80,7 @@ export function registerSceneTools(driver: WingDriver, changePlanner: ChangePlan
         scene_index: number;
         reason: string;
         confirmation_id: string;
+        confirmation_text?: string;
       }): Promise<ToolResult> => {
         const path = "/scene/current";
         const newVal: WingValue = { type: "int", value: args.scene_index };
@@ -88,7 +89,7 @@ export function registerSceneTools(driver: WingDriver, changePlanner: ChangePlan
           path,
           newVal,
           args.reason,
-          args.confirmation_id
+          args.confirmation_id, args.confirmation_text
         );
       },
     },
@@ -128,6 +129,7 @@ export function registerSceneTools(driver: WingDriver, changePlanner: ChangePlan
         name: string;
         reason: string;
         confirmation_id: string;
+        confirmation_text?: string;
       }): Promise<ToolResult> => {
         const path = "/scene/next/name";
         const newVal: WingValue = { type: "string", value: args.name };
@@ -136,7 +138,7 @@ export function registerSceneTools(driver: WingDriver, changePlanner: ChangePlan
           path,
           newVal,
           args.reason,
-          args.confirmation_id
+          args.confirmation_id, args.confirmation_text
         );
       },
     },

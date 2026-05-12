@@ -80,6 +80,7 @@ export function registerSendTools(driver: WingDriver, changePlanner: ChangePlann
           delta_db: { type: "number", description: "Send level change (must match prepare)." },
           reason: { type: "string", description: "Why this adjustment is needed." },
           confirmation_id: { type: "string", description: "Confirmation ID from prepare step." },
+          confirmation_text: { type: "string", description: "Confirmation text from the user." },
         },
         required: ["channel", "bus", "delta_db", "reason", "confirmation_id"],
       },
@@ -89,6 +90,7 @@ export function registerSendTools(driver: WingDriver, changePlanner: ChangePlann
         delta_db: number;
         reason: string;
         confirmation_id: string;
+        confirmation_text?: string;
       }): Promise<ToolResult> => {
         const path = `/ch/${args.channel}/send/${args.bus}/level`;
         const oldVal = await driver.getParam(path);

@@ -107,6 +107,7 @@ export function registerGroupTools(driver: WingDriver, changePlanner: ChangePlan
       },
       handler: async (args: {
         dca: number; mute: boolean; reason: string; confirmation_id: string;
+        confirmation_text?: string;
       }): Promise<ToolResult> => {
         const newVal: WingValue = { type: "bool", value: args.mute };
         return changePlanner.applyWrite("wing_dca_set_mute_apply", `/dca/${args.dca}/mute`, newVal, args.reason, args.confirmation_id);
@@ -147,6 +148,7 @@ export function registerGroupTools(driver: WingDriver, changePlanner: ChangePlan
       },
       handler: async (args: {
         dca: number; delta_db: number; reason: string; confirmation_id: string;
+        confirmation_text?: string;
       }): Promise<ToolResult> => {
         const oldVal = await driver.getParam(`/dca/${args.dca}/fader`);
         const oldDb = oldVal.type === "float" ? oldVal.value : 0;
@@ -213,6 +215,7 @@ export function registerGroupTools(driver: WingDriver, changePlanner: ChangePlan
       },
       handler: async (args: {
         group: number; mute: boolean; reason: string; confirmation_id: string;
+        confirmation_text?: string;
       }): Promise<ToolResult> => {
         const newVal: WingValue = { type: "bool", value: args.mute };
         return changePlanner.applyWrite("wing_mute_group_set_apply", `/mutegroup/${args.group}/mute`, newVal, args.reason, args.confirmation_id);
@@ -277,6 +280,7 @@ export function registerGroupTools(driver: WingDriver, changePlanner: ChangePlan
       },
       handler: async (args: {
         delta_db: number; reason: string; confirmation_id: string;
+        confirmation_text?: string;
       }): Promise<ToolResult> => {
         const oldVal = await driver.getParam("/main/lr/fader");
         const oldDb = oldVal.type === "float" ? oldVal.value : 0;
@@ -315,6 +319,7 @@ export function registerGroupTools(driver: WingDriver, changePlanner: ChangePlan
       },
       handler: async (args: {
         mute: boolean; reason: string; confirmation_id: string;
+        confirmation_text?: string;
       }): Promise<ToolResult> => {
         const newVal: WingValue = { type: "bool", value: args.mute };
         return changePlanner.applyWrite("wing_main_set_mute_apply", "/main/lr/mute", newVal, args.reason, args.confirmation_id);

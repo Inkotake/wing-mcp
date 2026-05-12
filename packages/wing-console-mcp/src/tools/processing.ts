@@ -100,6 +100,7 @@ export function registerProcessingTools(driver: WingDriver, changePlanner: Chang
       },
       handler: async (args: {
         target: string; band: string; parameter: string; value: number; reason: string; confirmation_id: string;
+        confirmation_text?: string;
       }): Promise<ToolResult> => {
         const path = `/${args.target}/eq/${args.band}/${args.parameter}`;
         const unit = args.parameter === "gain" ? "dB" : args.parameter === "freq" ? "Hz" : "";
@@ -178,6 +179,7 @@ export function registerProcessingTools(driver: WingDriver, changePlanner: Chang
       },
       handler: async (args: {
         channel: number; parameter: string; value: number; reason: string; confirmation_id: string;
+        confirmation_text?: string;
       }): Promise<ToolResult> => {
         const path = `/ch/${args.channel}/gate/${args.parameter}`;
         const unit = ["threshold", "range"].includes(args.parameter) ? "dB" : "ms";
@@ -256,6 +258,7 @@ export function registerProcessingTools(driver: WingDriver, changePlanner: Chang
       },
       handler: async (args: {
         target: string; parameter: string; value: number; reason: string; confirmation_id: string;
+        confirmation_text?: string;
       }): Promise<ToolResult> => {
         const path = `/${args.target}/comp/${args.parameter}`;
         const unit = args.parameter === "threshold" ? "dB" : args.parameter === "ratio" ? ":1" : args.parameter === "gain" ? "dB" : "ms";
@@ -355,6 +358,7 @@ export function registerProcessingTools(driver: WingDriver, changePlanner: Chang
       },
       handler: async (args: {
         slot: number; model: string; reason: string; confirmation_id: string;
+        confirmation_text?: string;
       }): Promise<ToolResult> => {
         const path = `/fx/${args.slot}/model`;
         const newVal: WingValue = { type: "string", value: args.model };

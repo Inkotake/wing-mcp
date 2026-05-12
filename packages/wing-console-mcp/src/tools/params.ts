@@ -79,13 +79,14 @@ export function registerParamTools(driver: WingDriver, changePlanner: ChangePlan
         value: any;
         reason: string;
         confirmation_id: string;
+        confirmation_text?: string;
       }): Promise<ToolResult> => {
         return changePlanner.applyWrite(
           "wing_param_set_apply",
           args.path,
           args.value as WingValue,
           args.reason,
-          args.confirmation_id
+          args.confirmation_id, args.confirmation_text
         );
       },
     },
