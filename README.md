@@ -31,6 +31,7 @@ wing-mcp/
 
 ### 前提
 
+- Status: **pre-alpha** — fake driver fully functional, Native/OSC drivers are stubs
 - Node.js >= 18
 - pnpm (`npm install -g pnpm`)
 - (可选) Rust 工具链 — 用于 native sidecar
