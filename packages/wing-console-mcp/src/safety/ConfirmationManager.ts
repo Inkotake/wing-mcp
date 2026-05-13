@@ -88,7 +88,7 @@ export class ConfirmationManager {
     requestedValue?: unknown,
     confirmationText?: string,
     currentOldValue?: unknown,
-  ): { valid: boolean; error?: string; ticket?: ConfirmationTicket } {
+  ): { valid: boolean; error?: string; errorCode?: string; ticket?: ConfirmationTicket } {
     const ticket = this.tickets.get(ticketId);
 
     if (!ticket) {
@@ -131,12 +131,13 @@ export class ConfirmationManager {
       if (!valuesEqual(ticket.oldValue, currentOldValue)) {
         return {
           valid: false,
-          error: `State changed since prepare: value was ${JSON.stringify(ticket.oldValue)}, now ${JSON.stringify(currentOldValue)}. Re-prepare the change.`,
+          errorCode: "MATERIAL_STATE_CHANGED" as const,
+          error: `MATERIAL_STATE_CHANGED: ${ticket.target} changed after preparation. Prepared old value: ${JSON.stringify(ticket.oldValue)}, current value: ${JSON.stringify(currentOldValue)}. Re-run prepare before applying.`,
         };
       }
     }
 
-    // For high/critical risk, validate confirmation text
+    // For high/critical risk, validate confirmation text with exact match
     if (ticket.risk === "high" || ticket.risk === "critical") {
       if (!confirmationText || confirmationText.trim().length === 0) {
         return {
@@ -144,16 +145,14 @@ export class ConfirmationManager {
           error: `Confirmation text required for ${ticket.risk} risk actions.`,
         };
       }
-      // Critical: must EXACTLY match the required confirmation template
-      if (ticket.risk === "critical") {
-        const normalizedUser = normalizeConfirmationText(confirmationText);
-        const normalizedRequired = normalizeConfirmationText(ticket.exactConfirmationText);
-        if (normalizedUser !== normalizedRequired) {
-          return {
-            valid: false,
-            error: `Exact confirmation required. You must say: "${ticket.exactConfirmationText}"`,
-          };
-        }
+      // Both high and critical: must EXACTLY match the required confirmation template
+      const normalizedUser = normalizeConfirmationText(confirmationText);
+      const normalizedRequired = normalizeConfirmationText(ticket.exactConfirmationText);
+      if (normalizedUser !== normalizedRequired) {
+        return {
+          valid: false,
+          error: `Exact confirmation required. You must say: "${ticket.exactConfirmationText}"`,
+        };
       }
     }
 

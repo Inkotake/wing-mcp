@@ -1,7 +1,12 @@
 import { v4 as uuidv4 } from "uuid";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import * as crypto from "node:crypto";
 import { AuditRecord, Mode, Risk, DriverKind } from "../types.js";
+
+function hashConfirmation(text: string, ticketId: string): string {
+  return crypto.createHash("sha256").update(`${text}:${ticketId}`).digest("hex").slice(0, 16);
+}
 
 export class AuditLogger {
   private records: AuditRecord[] = [];
@@ -53,10 +58,15 @@ export class AuditLogger {
     requestedValue: unknown;
     readbackValue: unknown;
     confirmationText?: string;
+    confirmationId?: string;
     result: AuditRecord["result"];
     driver: DriverKind;
     operatorId?: string;
   }): AuditRecord {
+    // Hash confirmation text — never store raw confirmation in audit
+    const confirmationHash = params.confirmationText && params.confirmationId
+      ? hashConfirmation(params.confirmationText, params.confirmationId)
+      : undefined;
     const record: AuditRecord = {
       id: uuidv4(),
       timestamp: new Date().toISOString(),
@@ -70,7 +80,7 @@ export class AuditLogger {
       old_value: params.oldValue,
       requested_value: params.requestedValue,
       readback_value: params.readbackValue,
-      confirmation_text: params.confirmationText,
+      confirmation_text: confirmationHash,
       result: params.result,
       driver: params.driver,
     };

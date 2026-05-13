@@ -145,9 +145,12 @@ export class ChangePlanner {
         currentValue,               // detect material state change since prepare
       );
       if (!validation.valid) {
+        const errorCode = validation.errorCode === "MATERIAL_STATE_CHANGED"
+          ? "MATERIAL_STATE_CHANGED" as const
+          : "RISK_CONFIRMATION_REQUIRED" as const;
         return {
           ok: false,
-          errors: [{ code: "RISK_CONFIRMATION_REQUIRED", message: validation.error! }],
+          errors: [{ code: errorCode, message: validation.error! }],
           human_summary: `确认验证失败：${validation.error}`,
         };
       }

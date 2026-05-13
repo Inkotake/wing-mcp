@@ -73,13 +73,15 @@ function validateArgs(toolName: string, args: Record<string, unknown>): string |
 
 // Configuration from environment
 // Validate mode at startup — invalid mode kills the server with clear error
-let mode: Mode;
-try {
-  mode = validateMode(process.env.WING_MODE ?? "rehearsal_safe");
-} catch (e: any) {
-  console.error(`[wing-console-mcp] ${e.message}`);
-  process.exit(1);
+function loadMode(): Mode {
+  try {
+    return validateMode(process.env.WING_MODE ?? "rehearsal_safe");
+  } catch (e: any) {
+    console.error(`[wing-console-mcp] ${e.message}`);
+    process.exit(1);
+  }
 }
+const mode = loadMode();
 
 const config = {
   mode,
@@ -195,18 +197,23 @@ const server = new Server(
 
 // Register tool listing
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-  const toolList = Object.entries(allTools)
-    .filter(([name]) => {
-      // Filter out disabled raw tools
-      if (!config.enableRaw && name.includes("raw_")) return false;
-      return true;
-    })
-    .map(([name, tool]) => ({
+  const toolList: Array<Record<string, unknown>> = [];
+  for (const [name, tool] of Object.entries(allTools)) {
+    if (!config.enableRaw && name.includes("raw_")) continue;
+    const isRead = !name.includes("_apply") && !name.includes("_set_") && !name.includes("_adjust_");
+    const isDestructive = name.includes("_apply") || name.includes("phantom") || name.includes("scene_recall") || name.includes("routing_set") || name.includes("raw_");
+    toolList.push({
       name,
       description: tool.description,
       inputSchema: tool.inputSchema,
-    }));
-
+      annotations: {
+        readOnlyHint: isRead && !isDestructive,
+        destructiveHint: isDestructive,
+        idempotentHint: !isDestructive,
+        openWorldHint: !name.includes("raw_"),
+      },
+    });
+  }
   return { tools: toolList };
 });
 
@@ -244,7 +251,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           errors: [{ code: "POLICY_DENIED", message: rateCheck.reason ?? "Rate limit exceeded" }],
           human_summary: `速率限制：${rateCheck.reason ?? "too many requests"}`,
           data: { retryAfterMs: rateCheck.retryAfterMs },
-        } satisfies ToolResult) }],
+        } as ToolResult) }],
         isError: true,
       };
     }
@@ -259,27 +266,22 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       if (result.ok) rateLimiter.record(toolName, risk);
     }
 
-    return {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify(result),
-        },
-      ],
+    const mcpResult: any = {
+      content: [{ type: "text", text: JSON.stringify(result) }],
       isError: !result.ok,
     };
+    if (!mcpResult.isError) {
+      mcpResult.structuredContent = result;
+    }
+    return mcpResult;
   } catch (e: any) {
+    const errResult = {
+      ok: false,
+      errors: [{ code: "PROTOCOL_ERROR", message: e.message }],
+      human_summary: `工具执行错误：${e.message}`,
+    };
     return {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify({
-            ok: false,
-            errors: [{ code: "PROTOCOL_ERROR", message: e.message }],
-            human_summary: `工具执行错误：${e.message}`,
-          }),
-        },
-      ],
+      content: [{ type: "text", text: JSON.stringify(errResult) }],
       isError: true,
     };
   }

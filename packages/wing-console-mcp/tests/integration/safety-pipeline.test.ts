@@ -110,7 +110,7 @@ describe("End-to-end safety pipeline", () => {
       ticketId, "确认执行"
     );
     expect(apply.ok).toBe(false);
-    expect(apply.errors![0].message).toContain("State changed");
+    expect(apply.errors![0].message).toContain("MATERIAL_STATE_CHANGED");
   });
 
   it("rejects critical without exact confirmation text", async () => {

@@ -91,6 +91,6 @@ describe("ConfirmationManager with critical exact match", () => {
       { type: "float", value: -7.0, unit: "dB" }, "确认",
       { type: "float", value: -3.0, unit: "dB" }); // someone else changed it
     expect(result.valid).toBe(false);
-    expect(result.error).toContain("State changed");
+    expect(result.error).toContain("MATERIAL_STATE_CHANGED");
   });
 });
