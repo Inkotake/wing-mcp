@@ -285,7 +285,7 @@ export function registerProcessingTools(driver: WingDriver, changePlanner: Chang
                 model: modelVal?.type === "string" ? modelVal.value : "Unknown",
                 inserted: false,
               });
-            } catch { break; }
+            } catch { continue; }
           }
           return {
             ok: true,

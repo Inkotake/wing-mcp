@@ -39,7 +39,7 @@ export function registerGroupTools(driver: WingDriver, changePlanner: ChangePlan
                 mute: mute.type === "bool" ? mute.value : false,
                 fader: fader.type === "float" ? fader.value : 0,
               });
-            } catch { break; }
+            } catch { continue; }
           }
           return {
             ok: true,
@@ -170,7 +170,7 @@ export function registerGroupTools(driver: WingDriver, changePlanner: ChangePlan
             try {
               const mute = await driver.getParam(`/mutegroup/${i}/mute`);
               groups.push({ group: i, muted: mute.type === "bool" ? mute.value : false });
-            } catch { break; }
+            } catch { continue; }
           }
           return {
             ok: true,
@@ -346,7 +346,7 @@ export function registerGroupTools(driver: WingDriver, changePlanner: ChangePlan
                 mute: mute.type === "bool" ? mute.value : false,
                 fader: fader.type === "float" ? fader.value : 0,
               });
-            } catch { break; }
+            } catch { continue; }
           }
           return {
             ok: true,

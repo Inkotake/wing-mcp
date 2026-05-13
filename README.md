@@ -15,20 +15,17 @@ AI 调音师是一个放在排练室/演出现场的智能系统，它通过 MCP
 ## 项目结构
 
 ```
-wingmcp/
+wing-mcp/
 ├── packages/
-│   ├── wing-console-mcp/        # 核心 MCP 服务器 — 60+ tools
-│   ├── fake-wing/                # 仿真 WING（无需硬件即可开发测试）
-│   ├── sound-diagnosis-engine/   # 诊断引擎 — no-sound/feedback/monitor
-│   └── sound-memory-mcp/         # 房间知识库 MCP
-├── rust/wing-native-sidecar/     # Native 协议边车 (Rust)
-├── skill/wing-console-operator/  # Claude Code / ChatGPT Skill
-├── agent-presets/                # Agent 配置、子代理、/命令
-├── docs/                         # 15 份完整设计文档
+│   ├── wing-console-mcp/        # 核心 MCP 服务器 — 70+ tools
+│   └── fake-wing/                # 仿真 WING + 故障注入 profiles
+├── rust/wing-native-sidecar/     # Native 协议边车 (Rust, JSON-RPC)
+├── docs/                         # 设计文档 + 工具参考
 ├── mcp-spec/                     # MCP 工具规范 (YAML + JSON Schema)
-├── issues/                       # 18 个开发任务卡
-└── examples/                     # 对话样例、patch sheet、incident
+└── issues/                       # 18 个开发任务卡
 ```
+
+> **AI 调音师** (诊断引擎、房间记忆、Skill、语音) 在独立项目 [mixingagent](https://github.com/Inkotake/mixingagent)
 
 ## 快速开始
 

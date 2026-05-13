@@ -207,6 +207,7 @@ export const RISK_MAP: Record<string, Risk> = {
   wing_emergency_stop_apply: "critical",
   wing_emergency_status: "none",
   wing_emergency_reset: "high",
+  wing_emergency_reset_apply: "high",
   // Raw tools
   wing_raw_osc_prepare: "critical",
   wing_raw_osc_apply: "critical",
@@ -239,5 +240,5 @@ export const AuditRecordSchema = z.object({
   readback_value: z.unknown(),
   confirmation_text: z.string().optional(),
   result: z.enum(["success", "denied", "failed", "readback_mismatch"]),
-  driver: z.enum(["native", "osc", "wapi", "fake"]),
+  driver: z.enum(["native", "osc", "fake"]),
 });

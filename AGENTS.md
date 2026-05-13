@@ -34,7 +34,7 @@ packages/
     tools/
       device.ts         - discover, connect, status
       schema.ts         - schema search, param resolve
-      params.ts         - param get/set
+      params.ts         - param get/set (generic)
       channels.ts       - channel list/get/mute/fader
       sends.ts          - send get/adjust
       routing.ts        - routing trace/get/set
@@ -42,6 +42,11 @@ packages/
       scenes.ts         - scene list/recall, snapshot save
       meters.ts         - meter catalog/read, signal check
       diagnosis.ts      - diagnosis session state machine
+      views.ts          - quick_check, summary, snapshot, channel_strip, path_trace
+      processing.ts     - EQ, gate, compressor, FX slot
+      groups.ts         - DCA, mute group, main LR, matrix
+      bulk.ts           - param_bulk_get, debug_dump, USB recorder
+      emergency.ts      - emergency stop/status/reset
       raw.ts            - raw OSC/native (disabled by default)
 ```
 
