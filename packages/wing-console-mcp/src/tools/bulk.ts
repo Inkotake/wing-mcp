@@ -1,16 +1,17 @@
 import { WingDriver } from "../drivers/WingDriver.js";
 import { ToolResult, WingValue } from "../types.js";
+import { ChangePlanner } from "../safety/ChangePlanner.js";
 
 /**
- * Bulk Operations — Param Bulk Read, Debug Dump, USB Recorder, Virtual Soundcheck
+ * Bulk Operations — Param Bulk Read, Debug Dump, USB Recorder
  *
- * wing_param_bulk_get: efficient multi-parameter read (avoids 100 individual calls)
+ * wing_param_bulk_get: efficient multi-parameter read
  * wing_debug_dump_state: full console state dump for bug reports
- * wing_usb_recorder: transport control for the built-in USB/SD recorder
- * wing_virtual_soundcheck: toggle virtual soundcheck mode (CRITICAL)
+ * wing_usb_recorder_*: transport control for the built-in USB/SD recorder
  */
 
-export function registerBulkTools(driver: WingDriver) {
+export function registerBulkTools(driver: WingDriver, changePlanner?: ChangePlanner) {
+  const cp = changePlanner;
   return {
     wing_param_bulk_get: {
       description:
@@ -177,6 +178,72 @@ export function registerBulkTools(driver: WingDriver) {
         } catch (e: any) {
           return { ok: false, errors: [{ code: "PARAM_NOT_FOUND", message: e.message }], human_summary: `Recorder读取失败: ${e.message}` };
         }
+      },
+    },
+
+    // ── USB Recorder Write Controls ────────────────────
+
+    wing_usb_recorder_record_prepare: {
+      description: "Prepare to start USB/SD recording. HIGH risk — recording captures live audio. Write: prepare/apply/readback/audit.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          reason: { type: "string", description: "Why recording is being started." },
+        },
+        required: ["reason"],
+      },
+      handler: async (args: { reason: string }): Promise<ToolResult> => {
+        if (!cp) return { ok: false, errors: [{ code: "POLICY_DENIED", message: "Write tools not available (no ChangePlanner)" }], human_summary: "录制写入工具不可用。" };
+        return cp.prepareWrite("wing_usb_recorder_record_prepare", "/recorder/transport", { type: "string", value: "recording" }, args.reason);
+      },
+    },
+
+    wing_usb_recorder_record_apply: {
+      description: "Apply: start USB/SD recording. HIGH risk. Write: prepare/apply/readback/audit.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          reason: { type: "string" },
+          confirmation_id: { type: "string" },
+          confirmation_text: { type: "string" },
+        },
+        required: ["reason", "confirmation_id"],
+      },
+      handler: async (args: { reason: string; confirmation_id: string; confirmation_text?: string }): Promise<ToolResult> => {
+        if (!cp) return { ok: false, errors: [{ code: "POLICY_DENIED", message: "Write tools not available" }], human_summary: "录制写入工具不可用。" };
+        return cp.applyWrite("wing_usb_recorder_record_apply", "/recorder/transport", { type: "string", value: "recording" }, args.reason, args.confirmation_id, args.confirmation_text);
+      },
+    },
+
+    wing_usb_recorder_stop_prepare: {
+      description: "Prepare to stop USB/SD recording. HIGH risk — stops ongoing recording. Write: prepare/apply/readback/audit.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          reason: { type: "string" },
+        },
+        required: ["reason"],
+      },
+      handler: async (args: { reason: string }): Promise<ToolResult> => {
+        if (!cp) return { ok: false, errors: [{ code: "POLICY_DENIED", message: "Write tools not available" }], human_summary: "录制写入工具不可用。" };
+        return cp.prepareWrite("wing_usb_recorder_stop_prepare", "/recorder/transport", { type: "string", value: "stopped" }, args.reason);
+      },
+    },
+
+    wing_usb_recorder_stop_apply: {
+      description: "Apply: stop USB/SD recording. HIGH risk. Write: prepare/apply/readback/audit.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          reason: { type: "string" },
+          confirmation_id: { type: "string" },
+          confirmation_text: { type: "string" },
+        },
+        required: ["reason", "confirmation_id"],
+      },
+      handler: async (args: { reason: string; confirmation_id: string; confirmation_text?: string }): Promise<ToolResult> => {
+        if (!cp) return { ok: false, errors: [{ code: "POLICY_DENIED", message: "Write tools not available" }], human_summary: "录制写入工具不可用。" };
+        return cp.applyWrite("wing_usb_recorder_stop_apply", "/recorder/transport", { type: "string", value: "stopped" }, args.reason, args.confirmation_id, args.confirmation_text);
       },
     },
   };

@@ -76,17 +76,3 @@ export class AliasResolver {
     return results;
   }
 }
-
-/**
- * UnitConverter handles unit conversions (dB, linear, etc.)
- */
-export class UnitConverter {
-  static dbToLinear(db: number): number {
-    return Math.pow(10, db / 20);
-  }
-
-  static linearToDb(linear: number): number {
-    if (linear <= 0) return -120;
-    return 20 * Math.log10(linear);
-  }
-}

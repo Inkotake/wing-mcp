@@ -198,10 +198,18 @@ export const RISK_MAP: Record<string, Risk> = {
   wing_main_set_mute_prepare: "high",
   wing_main_set_mute_apply: "high",
   wing_matrix_list: "none",
+  wing_matrix_set_mute_prepare: "high",
+  wing_matrix_set_mute_apply: "high",
+  wing_matrix_adjust_fader_prepare: "high",
+  wing_matrix_adjust_fader_apply: "high",
   // Bulk tools
   wing_param_bulk_get: "none",
   wing_debug_dump_state: "none",
   wing_usb_recorder_get: "none",
+  wing_usb_recorder_record_prepare: "high",
+  wing_usb_recorder_record_apply: "high",
+  wing_usb_recorder_stop_prepare: "high",
+  wing_usb_recorder_stop_apply: "high",
   // Emergency tools
   wing_emergency_stop: "critical",
   wing_emergency_stop_apply: "critical",

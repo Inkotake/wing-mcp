@@ -330,7 +330,7 @@ export function registerGroupTools(driver: WingDriver, changePlanner: ChangePlan
 
     wing_matrix_list: {
       description:
-        "List all 8 matrix outputs with names, mute, and fader. Matrix mixes are typically used for front fills, delays, recording, and broadcast. Risk: none. Read-only.",
+        "List all 8 matrix outputs with names, mute, and fader. Risk: none. Read-only.",
       inputSchema: { type: "object" as const, properties: {} },
       handler: async (): Promise<ToolResult> => {
         try {
@@ -356,6 +356,82 @@ export function registerGroupTools(driver: WingDriver, changePlanner: ChangePlan
         } catch (e: any) {
           return { ok: false, errors: [{ code: "PROTOCOL_ERROR", message: e.message }], human_summary: `Matrix列表获取失败: ${e.message}` };
         }
+      },
+    },
+
+    wing_matrix_set_mute_prepare: {
+      description: "Prepare muting/unmuting a matrix output. HIGH risk — affects broadcast/recording feeds. Write: prepare/apply/readback/audit.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          matrix: { type: "number", description: "Matrix number (1-8)." },
+          mute: { type: "boolean" },
+          reason: { type: "string" },
+        },
+        required: ["matrix", "mute", "reason"],
+      },
+      handler: async (args: { matrix: number; mute: boolean; reason: string }): Promise<ToolResult> => {
+        const newVal: WingValue = { type: "bool", value: args.mute };
+        return changePlanner.prepareWrite("wing_matrix_set_mute_prepare", `/mtx/${args.matrix}/mute`, newVal, args.reason);
+      },
+    },
+
+    wing_matrix_set_mute_apply: {
+      description: "Apply matrix mute change. HIGH risk. Write: prepare/apply/readback/audit.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          matrix: { type: "number" },
+          mute: { type: "boolean" },
+          reason: { type: "string" },
+          confirmation_id: { type: "string" },
+          confirmation_text: { type: "string" },
+        },
+        required: ["matrix", "mute", "reason", "confirmation_id"],
+      },
+      handler: async (args: { matrix: number; mute: boolean; reason: string; confirmation_id: string; confirmation_text?: string }): Promise<ToolResult> => {
+        const newVal: WingValue = { type: "bool", value: args.mute };
+        return changePlanner.applyWrite("wing_matrix_set_mute_apply", `/mtx/${args.matrix}/mute`, newVal, args.reason, args.confirmation_id, args.confirmation_text);
+      },
+    },
+
+    wing_matrix_adjust_fader_prepare: {
+      description: "Prepare adjusting a matrix fader. HIGH risk. Write: prepare/apply/readback/audit.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          matrix: { type: "number", description: "Matrix number (1-8)." },
+          delta_db: { type: "number" },
+          reason: { type: "string" },
+        },
+        required: ["matrix", "delta_db", "reason"],
+      },
+      handler: async (args: { matrix: number; delta_db: number; reason: string }): Promise<ToolResult> => {
+        const oldVal = await driver.getParam(`/mtx/${args.matrix}/fader`);
+        const oldDb = oldVal.type === "float" ? oldVal.value : 0;
+        const newVal: WingValue = { type: "float", value: oldDb + args.delta_db, unit: "dB" };
+        return changePlanner.prepareWrite("wing_matrix_adjust_fader_prepare", `/mtx/${args.matrix}/fader`, newVal, args.reason);
+      },
+    },
+
+    wing_matrix_adjust_fader_apply: {
+      description: "Apply matrix fader change. HIGH risk. Write: prepare/apply/readback/audit.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          matrix: { type: "number" },
+          delta_db: { type: "number" },
+          reason: { type: "string" },
+          confirmation_id: { type: "string" },
+          confirmation_text: { type: "string" },
+        },
+        required: ["matrix", "delta_db", "reason", "confirmation_id"],
+      },
+      handler: async (args: { matrix: number; delta_db: number; reason: string; confirmation_id: string; confirmation_text?: string }): Promise<ToolResult> => {
+        const oldVal = await driver.getParam(`/mtx/${args.matrix}/fader`);
+        const oldDb = oldVal.type === "float" ? oldVal.value : 0;
+        const newVal: WingValue = { type: "float", value: oldDb + args.delta_db, unit: "dB" };
+        return changePlanner.applyWrite("wing_matrix_adjust_fader_apply", `/mtx/${args.matrix}/fader`, newVal, args.reason, args.confirmation_id, args.confirmation_text);
       },
     },
   };

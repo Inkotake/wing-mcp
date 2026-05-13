@@ -128,7 +128,7 @@ const diagnosisTools = registerDiagnosisTools(driver, changePlanner);
 const viewTools = registerViewTools(driver);
 const processingTools = registerProcessingTools(driver, changePlanner);
 const groupTools = registerGroupTools(driver, changePlanner);
-const bulkTools = registerBulkTools(driver);
+const bulkTools = registerBulkTools(driver, changePlanner);
 const emergencyTools = registerEmergencyTools(driver, changePlanner);
 const rawTools = registerRawTools(driver, changePlanner);
 
