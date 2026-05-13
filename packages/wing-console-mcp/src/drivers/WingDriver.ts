@@ -291,6 +291,7 @@ export class FakeWingDriver implements WingDriver {
       case "no_input_ch1":
         this.params.set("/ch/1/meter/input", { type: "float", value: -120.0, unit: "dBFS" });
         this.params.set("/ch/1/meter/pre_fader", { type: "float", value: -120.0, unit: "dBFS" });
+        this.params.set("/ch/1/meter/post_fader", { type: "float", value: -120.0, unit: "dBFS" });
         break;
       case "muted_ch1":
         this.params.set("/ch/1/mute", { type: "bool", value: true });
