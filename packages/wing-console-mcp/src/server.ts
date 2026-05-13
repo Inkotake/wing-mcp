@@ -105,6 +105,20 @@ const auditLogger = new AuditLogger();
 const stateCache = new StateCache();
 const aliasResolver = new AliasResolver();
 
+// Pre-populate common aliases
+aliasResolver.register("main vocal", "CH 1");
+aliasResolver.register("主唱", "CH 1");
+aliasResolver.register("guitar", "CH 3");
+aliasResolver.register("吉他", "CH 3");
+aliasResolver.register("bass", "CH 4");
+aliasResolver.register("贝斯", "CH 4");
+aliasResolver.register("drummer monitor", "Bus 1");
+aliasResolver.register("鼓手耳返", "Bus 1");
+aliasResolver.register("main fader", "/main/lr/fader");
+aliasResolver.register("主输出", "/main/lr/fader");
+aliasResolver.register("click", "CH 12");
+aliasResolver.register("节拍器", "CH 12");
+
 const changePlanner = new ChangePlanner(
   driver,
   policyEngine,

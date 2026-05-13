@@ -77,9 +77,22 @@ export function registerSchemaTools(driver: WingDriver) {
         },
         required: ["phrase"],
       },
-      handler: async (args: { phrase: string; room_id?: string }): Promise<ToolResult> => {
-        // Simple keyword-based resolution
+      handler: async (args: { phrase: string; room_id?: string }, context?: { aliasResolver?: any }): Promise<ToolResult> => {
         const phrase = args.phrase.toLowerCase();
+
+        // Try AliasResolver first (dynamic, loaded from room memory)
+        if (context?.aliasResolver) {
+          const resolved = context.aliasResolver.resolve(args.phrase);
+          if (resolved) {
+            return {
+              ok: true,
+              data: { resolved: { phrase: args.phrase, target: resolved } },
+              human_summary: `"${args.phrase}" 解析为 ${resolved} (from resolver)`,
+            };
+          }
+        }
+
+        // Fall back to hardcoded mappings
         const mappings: Array<{ phrase: string; target: string; channel?: number }> = [
           { phrase: "main vocal", target: "CH 1", channel: 1 },
           { phrase: "主唱", target: "CH 1", channel: 1 },
@@ -98,6 +111,16 @@ export function registerSchemaTools(driver: WingDriver) {
           { phrase: "main lr", target: "Main LR", channel: 0 },
           { phrase: "主扩", target: "Main LR", channel: 0 },
           { phrase: "主输出", target: "Main LR", channel: 0 },
+          { phrase: "click", target: "CH 12", channel: 12 },
+          { phrase: "节拍器", target: "CH 12", channel: 12 },
+          { phrase: "kick", target: "CH 5", channel: 5 },
+          { phrase: "底鼓", target: "CH 5", channel: 5 },
+          { phrase: "snare", target: "CH 6", channel: 6 },
+          { phrase: "军鼓", target: "CH 6", channel: 6 },
+          { phrase: "overhead", target: "CH 7", channel: 7 },
+          { phrase: "吊镲", target: "CH 7", channel: 7 },
+          { phrase: "spd", target: "CH 11", channel: 11 },
+          { phrase: "打击垫", target: "CH 11", channel: 11 },
         ];
 
         const matches = mappings.filter(

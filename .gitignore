@@ -2,6 +2,7 @@ node_modules/
 dist/
 data/
 *.tsbuildinfo
+.claude/scheduled_tasks.lock
 target/
 .env
 *.log
