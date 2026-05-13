@@ -59,10 +59,11 @@ export function registerViewTools(driver: WingDriver) {
             issues.push(`${lowFaderChannels.length} 个通道推子极低 (< -60dB)`);
           }
 
-          // Quick meter sweep if requested
+          // Quick meter sweep if requested — check Main LR + first 8 channels
           if (args.include_meters) {
             try {
-              const meters = await driver.meterRead(["/main/lr/fader", "/ch/1/fader"], 500);
+              const meterTargets = ["/main/lr/fader", ...Array.from({length: Math.min(8, mutedChannels.length + 4)}, (_, i) => `/ch/${i + 1}/fader`)];
+              const meters = await driver.meterRead(meterTargets, 500);
               const mainMeter = meters.meters[0];
               if (mainMeter && !mainMeter.present) {
                 issues.push("Main LR 无信号");
@@ -328,8 +329,8 @@ export function registerViewTools(driver: WingDriver) {
               const meters = await driver.meterRead(meterTargets, 1000);
               snapshot.meters = meters.meters.map(m => ({
                 target: m.target,
-                rmsDbfs: m.rmsDbfs.toFixed(1),
-                peakDbfs: m.peakDbfs.toFixed(1),
+                rmsDbfs: Math.round(m.rmsDbfs * 10) / 10,
+                peakDbfs: Math.round(m.peakDbfs * 10) / 10,
                 present: m.present,
               }));
             } catch {}

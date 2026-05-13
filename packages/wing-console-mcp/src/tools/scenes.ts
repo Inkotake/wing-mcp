@@ -58,8 +58,9 @@ export function registerSceneTools(driver: WingDriver, changePlanner: ChangePlan
         scene_index: number;
         reason: string;
       }): Promise<ToolResult> => {
-        const path = "/scene/current";
-        const newVal: WingValue = { type: "int", value: args.scene_index };
+        // Recall a scene — this is a destructive action that replaces current console state
+        const path = `/scene/${args.scene_index}/recall`;
+        const newVal: WingValue = { type: "int", value: 1 }; // 1 = trigger recall
         return changePlanner.prepareWrite("wing_scene_recall_prepare", path, newVal, args.reason);
       },
     },
@@ -82,8 +83,8 @@ export function registerSceneTools(driver: WingDriver, changePlanner: ChangePlan
         confirmation_id: string;
         confirmation_text?: string;
       }): Promise<ToolResult> => {
-        const path = "/scene/current";
-        const newVal: WingValue = { type: "int", value: args.scene_index };
+        const path = `/scene/${args.scene_index}/recall`;
+        const newVal: WingValue = { type: "int", value: 1 };
         return changePlanner.applyWrite(
           "wing_scene_recall_apply",
           path,

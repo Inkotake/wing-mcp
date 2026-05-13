@@ -37,7 +37,7 @@ import { registerGroupTools } from "./tools/groups.js";
 import { registerBulkTools } from "./tools/bulk.js";
 import { registerEmergencyTools } from "./tools/emergency.js";
 import { registerRawTools } from "./tools/raw.js";
-import { Mode, ToolResult, RISK_MAP } from "./types.js";
+import { Mode, ToolResult, RISK_MAP, validateMode, VALID_MODES } from "./types.js";
 
 /** Runtime input validation for common numeric ranges and enums */
 function validateArgs(toolName: string, args: Record<string, unknown>): string | null {
@@ -72,8 +72,17 @@ function validateArgs(toolName: string, args: Record<string, unknown>): string |
 }
 
 // Configuration from environment
+// Validate mode at startup — invalid mode kills the server with clear error
+let mode: Mode;
+try {
+  mode = validateMode(process.env.WING_MODE ?? "rehearsal_safe");
+} catch (e: any) {
+  console.error(`[wing-console-mcp] ${e.message}`);
+  process.exit(1);
+}
+
 const config = {
-  mode: (process.env.WING_MODE as Mode) ?? "rehearsal_safe",
+  mode,
   liveMode: process.env.WING_LIVE_MODE === "1",
   driver: process.env.WING_DRIVER ?? "fake",
   enableRaw: process.env.WING_ENABLE_RAW === "1",
@@ -151,6 +160,8 @@ const toolContext = {
   mode: config.mode,
   liveMode: config.liveMode,
   driver: driver.kind,
+  stateCache,
+  aliasResolver,
 };
 
 // Create MCP server
@@ -349,7 +360,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
               mute: mute.type === "bool" ? mute.value : false,
               fader: fader.type === "float" ? fader.value : 0,
             });
-          } catch { break; }
+          } catch { continue; }
         }
         snapshot.channels = channels;
       } catch {}

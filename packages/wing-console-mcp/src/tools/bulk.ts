@@ -142,7 +142,7 @@ export function registerBulkTools(driver: WingDriver) {
           if ((includeAll || sections.includes("meters")) && args.include_meters !== false) {
             try {
               const frame = await driver.meterRead(["/main/lr/fader"], 500);
-              dump.meters = frame.meters.map(m => ({ target: m.target, rmsDbfs: m.rmsDbfs.toFixed(1), peakDbfs: m.peakDbfs.toFixed(1), present: m.present }));
+              dump.meters = frame.meters.map(m => ({ target: m.target, rmsDbfs: Math.round(m.rmsDbfs * 10) / 10, peakDbfs: Math.round(m.peakDbfs * 10) / 10, present: m.present }));
             } catch {}
           }
 

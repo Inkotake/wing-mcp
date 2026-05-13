@@ -1,6 +1,6 @@
 import { DriverKind, WingDevice, WingValue, MeterFrame } from "../types.js";
 
-export { DriverKind, WingDevice, WingValue, MeterFrame };
+export type { DriverKind, WingDevice, WingValue, MeterFrame };
 
 export interface WingDriver {
   kind: DriverKind;
@@ -81,10 +81,13 @@ export class FakeWingDriver implements WingDriver {
     }
 
     // Scenes, DCA, Mute groups, Matrix, FX, Recorder
-    add([
-      ["/scene/current", { type: "int", value: 0 }],
-      ["/scene/0/name", { type: "string", value: "Scene 0 - Empty" }],
-    ]);
+    add([["/scene/current", { type: "int", value: 0 }]]);
+    for (let s = 0; s <= 9; s++) {
+      add([
+        [`/scene/${s}/name`, { type: "string", value: s === 0 ? "Scene 0 - Empty" : `Scene ${s}` }],
+        [`/scene/${s}/recall`, { type: "int", value: 0 }],
+      ]);
+    }
     // DCA 1-8
     for (let d = 1; d <= 8; d++) {
       add([

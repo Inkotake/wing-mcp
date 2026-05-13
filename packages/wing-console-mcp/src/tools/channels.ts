@@ -32,10 +32,10 @@ export function registerChannelTools(driver: WingDriver, changePlanner: ChangePl
           return {
             ok: true,
             data: channels,
-            human_summary: `${channels.length} 个通道：${channels
-              .filter((c) => c.name !== `CH ${c.ch}`)
-              .map((c) => `${c.name || `CH${c.ch}`}(${c.mute ? "MUTE" : ` ${c.fader.toFixed(1)}dB`})`)
-              .join(", ")}`,
+            human_summary: `${channels.length} 个通道。${[
+              ...channels.filter(c => c.mute).map(c => `静音: ${c.name ?? `CH${c.ch}`}`),
+              channels.length > 0 ? `活跃: ${channels.filter(c => !c.mute).slice(0, 6).map(c => `${c.name ?? `CH${c.ch}`}(${c.fader.toFixed(1)}dB)`).join(", ")}${channels.filter(c => !c.mute).length > 6 ? "..." : ""}` : "",
+            ].filter(s => s).join("; ")}`,
           };
         } catch (e: any) {
           return {

@@ -66,8 +66,16 @@ export function registerDeviceTools(driver: WingDriver) {
       },
       handler: async (args: { device: any }): Promise<ToolResult> => {
         try {
-          const parsed = WingDeviceSchema.parse(args.device);
-          await driver.connect(parsed);
+          const parsed = WingDeviceSchema.safeParse(args.device);
+          if (!parsed.success) {
+            return {
+              ok: false,
+              errors: [{ code: "VALUE_OUT_OF_RANGE", message: `Invalid device: ${parsed.error.message}` }],
+              human_summary: `设备参数无效：${parsed.error.message}`,
+            };
+          }
+          const device = parsed.data;
+          await driver.connect(device);
           const info = await driver.getInfo();
           return {
             ok: true,
@@ -91,9 +99,11 @@ export function registerDeviceTools(driver: WingDriver) {
         type: "object" as const,
         properties: {},
       },
-      handler: async (_args: any, context?: { mode?: string; liveMode?: boolean }): Promise<ToolResult> => {
+      handler: async (_args: any, context?: { mode?: string; liveMode?: boolean; stateCache?: any }): Promise<ToolResult> => {
         try {
           const info = await driver.getInfo();
+          // Cache device info for 30s
+          context?.stateCache?.set?.("__wing_status", { type: "node", value: info });
           return {
             ok: true,
             data: {
@@ -103,19 +113,21 @@ export function registerDeviceTools(driver: WingDriver) {
               mode: context?.mode ?? "unknown",
               liveMode: context?.liveMode ?? false,
             },
-            human_summary: `WING ${info.name} (${info.model}) — 已连接，驱动: ${driver.kind}`,
+            human_summary: `WING ${info.name} (${info.model}) — 已连接，驱动: ${driver.kind}，模式: ${context?.mode ?? "?"}`,
           };
         } catch (e: any) {
           return {
-            ok: true,
+            ok: false, // explicitly mark as not ok so AI knows to check
             data: {
               connected: false,
               driver: driver.kind,
-              mode: "unknown",
-              liveMode: false,
+              mode: context?.mode ?? "unknown",
+              liveMode: context?.liveMode ?? false,
+              error: e.message,
             },
             warnings: [{ code: "DEVICE_DISCONNECTED", message: e.message }],
-            human_summary: "未连接 WING 设备",
+            human_summary: "⚠️ 未连接 WING 设备。请先运行 wing_discover + wing_connect。",
+            next_actions: [{ tool: "wing_discover", description: "搜索可用WING设备" }],
           };
         }
       },

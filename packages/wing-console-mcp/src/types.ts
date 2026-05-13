@@ -1,16 +1,26 @@
 import { z } from "zod";
 
-export type DriverKind = "native" | "osc" | "wapi" | "fake";
+export type DriverKind = "native" | "osc" | "fake";
 export type Risk = "none" | "low" | "medium" | "high" | "critical";
 export type Mode = "read_only" | "rehearsal_safe" | "maintenance" | "developer_raw";
+
+export const VALID_MODES: Mode[] = ["read_only", "rehearsal_safe", "maintenance", "developer_raw"];
+
+export function validateMode(s: string): Mode {
+  if (VALID_MODES.includes(s as Mode)) return s as Mode;
+  throw new Error(`Invalid WING_MODE: "${s}". Must be one of: ${VALID_MODES.join(", ")}`);
+}
+
 export type ErrorCode =
   | "DEVICE_NOT_FOUND"
   | "DEVICE_DISCONNECTED"
   | "PARAM_NOT_FOUND"
   | "PARAM_READ_ONLY"
+  | "PARAM_EXPIRED"
   | "VALUE_OUT_OF_RANGE"
   | "RISK_CONFIRMATION_REQUIRED"
   | "POLICY_DENIED"
+  | "MATERIAL_STATE_CHANGED"
   | "READBACK_MISMATCH"
   | "DRIVER_TIMEOUT"
   | "PROTOCOL_ERROR"
