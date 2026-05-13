@@ -18,7 +18,7 @@ export function registerRawTools(driver: WingDriver, changePlanner: ChangePlanne
       },
       handler: async (args: {
         osc_path: string;
-        osc_value: any;
+        osc_value: WingValue;
         reason: string;
       }): Promise<ToolResult> => {
         const path = `/raw/osc${args.osc_path}`;
@@ -46,7 +46,7 @@ export function registerRawTools(driver: WingDriver, changePlanner: ChangePlanne
       },
       handler: async (args: {
         osc_path: string;
-        osc_value: any;
+        osc_value: WingValue;
         reason: string;
         confirmation_id: string;
         confirmation_text?: string;
@@ -76,7 +76,7 @@ export function registerRawTools(driver: WingDriver, changePlanner: ChangePlanne
       },
       handler: async (args: {
         native_path: string;
-        native_value: any;
+        native_value: WingValue;
         reason: string;
       }): Promise<ToolResult> => {
         const path = `/raw/native${args.native_path}`;
@@ -104,7 +104,7 @@ export function registerRawTools(driver: WingDriver, changePlanner: ChangePlanne
       },
       handler: async (args: {
         native_path: string;
-        native_value: any;
+        native_value: WingValue;
         reason: string;
         confirmation_id: string;
         confirmation_text?: string;

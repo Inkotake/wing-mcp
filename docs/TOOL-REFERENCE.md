@@ -1525,4 +1525,43 @@ Write tools (always prepare->apply):
   wing_fx_slot_set_model    wing_dca_set_mute          wing_dca_adjust_fader
   wing_mute_group_set       wing_main_adjust_fader     wing_main_set_mute
   wing_raw_osc              wing_raw_native
+  wing_emergency_stop        wing_emergency_reset
+  wing_usb_recorder_record   wing_usb_recorder_stop
+  wing_matrix_set_mute       wing_matrix_adjust_fader
+```
+
+## Emergency Tools
+
+| Tool | Risk | Read/Write | Description |
+|------|------|------------|-------------|
+| `wing_emergency_stop` | critical | prepare | Prepare panic mute (all/main_only/channels_only) |
+| `wing_emergency_stop_apply` | critical | apply | Execute panic mute on all targets |
+| `wing_emergency_status` | none | read | Check if emergency stop is active |
+| `wing_emergency_reset` | high | prepare | Prepare to clear emergency and unmute |
+| `wing_emergency_reset_apply` | high | apply | Unmute all targets and clear emergency |
+
+**Emergency scopes:**
+- `all`: Mute Main LR + all 48 channels + 16 buses + 8 DCAs
+- `main_only`: Mute Main LR only (fastest)
+- `channels_only`: Mute channels/buses/DCAs, leave Main LR
+
+## USB/SD Recorder Tools
+
+| Tool | Risk | Read/Write | Description |
+|------|------|------------|-------------|
+| `wing_usb_recorder_get` | none | read | Read recorder transport status |
+| `wing_usb_recorder_record_prepare` | high | prepare | Prepare to start recording |
+| `wing_usb_recorder_record_apply` | high | apply | Start USB/SD recording |
+| `wing_usb_recorder_stop_prepare` | high | prepare | Prepare to stop recording |
+| `wing_usb_recorder_stop_apply` | high | apply | Stop USB/SD recording |
+
+## Matrix Tools
+
+| Tool | Risk | Read/Write | Description |
+|------|------|------------|-------------|
+| `wing_matrix_list` | none | read | List all 8 matrix outputs |
+| `wing_matrix_set_mute_prepare` | high | prepare | Prepare matrix mute/unmute |
+| `wing_matrix_set_mute_apply` | high | apply | Apply matrix mute change |
+| `wing_matrix_adjust_fader_prepare` | high | prepare | Prepare matrix fader adjustment |
+| `wing_matrix_adjust_fader_apply` | high | apply | Apply matrix fader change |
 ```

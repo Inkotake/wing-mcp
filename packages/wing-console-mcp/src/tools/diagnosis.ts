@@ -202,7 +202,7 @@ export function registerDiagnosisTools(driver: WingDriver, changePlanner: Change
         fix_description: string;
         tool_to_use: string;
         target_path: string;
-        target_value: any;
+        target_value: WingValue;
       }): Promise<ToolResult> => {
         const session = sessions.get(args.session_id);
         if (!session) {
@@ -212,7 +212,7 @@ export function registerDiagnosisTools(driver: WingDriver, changePlanner: Change
         return changePlanner.prepareWrite(
           args.tool_to_use,
           args.target_path,
-          args.target_value as WingValue,
+          args.target_value,
           `[Diagnosis ${session.id}] ${args.fix_description}`
         );
       },
@@ -237,7 +237,7 @@ export function registerDiagnosisTools(driver: WingDriver, changePlanner: Change
         session_id: string;
         tool_to_use: string;
         target_path: string;
-        target_value: any;
+        target_value: WingValue;
         fix_description: string;
         confirmation_id: string;
         confirmation_text?: string;
@@ -250,7 +250,7 @@ export function registerDiagnosisTools(driver: WingDriver, changePlanner: Change
         const result = await changePlanner.applyWrite(
           args.tool_to_use,
           args.target_path,
-          args.target_value as WingValue,
+          args.target_value,
           `[Diagnosis ${session.id}] ${args.fix_description}`,
           args.confirmation_id, args.confirmation_text
         );

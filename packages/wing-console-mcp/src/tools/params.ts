@@ -49,7 +49,7 @@ export function registerParamTools(driver: WingDriver, changePlanner: ChangePlan
       },
       handler: async (args: {
         path: string;
-        value: any;
+        value: WingValue;
         reason: string;
       }): Promise<ToolResult> => {
         return changePlanner.prepareWrite(
@@ -76,7 +76,7 @@ export function registerParamTools(driver: WingDriver, changePlanner: ChangePlan
       },
       handler: async (args: {
         path: string;
-        value: any;
+        value: WingValue;
         reason: string;
         confirmation_id: string;
         confirmation_text?: string;

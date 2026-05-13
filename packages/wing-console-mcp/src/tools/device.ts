@@ -64,7 +64,7 @@ export function registerDeviceTools(driver: WingDriver) {
         },
         required: ["device"],
       },
-      handler: async (args: { device: any }): Promise<ToolResult> => {
+      handler: async (args: { device: { id: string; ip: string; name?: string; model?: string; serial?: string; firmware?: string } }): Promise<ToolResult> => {
         try {
           const parsed = WingDeviceSchema.safeParse(args.device);
           if (!parsed.success) {
