@@ -2,6 +2,7 @@ import { WingDriver } from "../drivers/WingDriver.js";
 import { ToolResult, WingValue } from "../types.js";
 import { ChangePlanner } from "../safety/ChangePlanner.js";
 import { valuesEqual } from "../safety/ConfirmationManager.js";
+import { BatchChangePlanner } from "../safety/BatchChangePlanner.js";
 
 /**
  * Emergency Tools — Panic Mute, Emergency Stop, All-Mute
@@ -19,7 +20,12 @@ let emergencyTimestamp: string | null = null;
 // Snapshot of mute/fader states saved before emergency stop, used for safe restore
 let emergencySnapshot: Array<{ path: string; oldValue: WingValue }> | null = null;
 
-export function registerEmergencyTools(driver: WingDriver, changePlanner: ChangePlanner) {
+export function registerEmergencyTools(
+  driver: WingDriver,
+  changePlanner: ChangePlanner,
+  batchPlanner?: BatchChangePlanner,
+) {
+  const bp = batchPlanner;
   return {
     wing_emergency_stop: {
       description:
@@ -124,42 +130,42 @@ export function registerEmergencyTools(driver: WingDriver, changePlanner: Change
         }
         emergencySnapshot = snapshot;
 
-        // Now mute all targets with per-target readback
-        const results: string[] = [];
-        const errors: string[] = [];
-
-        for (const path of paths) {
-          try {
-            await driver.setParam(path, muteVal);
-            const rb = await driver.getParam(path);
-            if (rb.type === "bool" && rb.value === true) {
-              results.push(`${path}: muted`);
-            } else {
-              errors.push(`${path}: readback mismatch`);
-            }
-          } catch (e: any) {
-            errors.push(`${path}: ${e.message}`);
+        // Use BatchChangePlanner for per-target read/write/readback/audit
+        let batchResult: { successCount: number; failCount: number; operations: Array<{ target: string }> };
+        if (bp) {
+          const result = await bp.executeBatch(
+            paths.slice(1).map(p => ({ target: p, requestedValue: muteVal, reason: `[EMERGENCY] ${args.reason}` })),
+            "wing_emergency_stop_apply", args.confirmation_id, args.confirmation_text,
+          );
+          batchResult = { successCount: result.successCount, failCount: result.failCount, operations: result.operations };
+        } else {
+          // Fallback: simple mute loop
+          let ok = 0, fail = 0;
+          const ops: Array<{ target: string }> = [];
+          for (const path of paths.slice(1)) {
+            try { await driver.setParam(path, muteVal); ok++; ops.push({ target: path }); }
+            catch { fail++; }
           }
+          batchResult = { successCount: ok + 1, failCount: fail, operations: ops }; // +1 for Main LR already done
         }
 
         // Only clear emergency if ALL targets muted successfully
-        emergencyActive = errors.length > 0;
+        emergencyActive = batchResult.failCount > 0;
 
         return {
-          ok: errors.length === 0,
+          ok: batchResult.failCount === 0,
           data: {
             scope,
-            targets_muted: results.length,
-            targets_failed: errors.length,
-            results: results.slice(0, 10),
-            errors: errors.slice(0, 10),
+            targets_processed: batchResult.successCount + batchResult.failCount,
+            targets_muted: batchResult.successCount,
+            targets_failed: batchResult.failCount,
           },
-          warnings: errors.length > 0
-            ? [{ code: "READBACK_MISMATCH" as const, message: `${errors.length} targets failed to mute` }]
+          warnings: batchResult.failCount > 0
+            ? [{ code: "READBACK_MISMATCH" as const, message: `${batchResult.failCount} targets failed to mute` }]
             : undefined,
-          human_summary: errors.length === 0
-            ? `🚨 紧急停止完成: ${results.length} 个目标已静音 (scope: ${scope})`
-            : `🚨 紧急停止部分完成: ${results.length} 成功, ${errors.length} 失败 — 紧急状态保持激活`,
+          human_summary: batchResult.failCount === 0
+            ? `🚨 紧急停止完成: ${batchResult.successCount} 个目标已静音 (scope: ${scope})`
+            : `🚨 紧急停止部分完成: ${batchResult.successCount} 成功, ${batchResult.failCount} 失败 — 紧急状态保持激活`,
         };
       },
     },

@@ -20,6 +20,7 @@ import { ConfirmationManager } from "./safety/ConfirmationManager.js";
 import { AuditLogger } from "./safety/AuditLogger.js";
 import { ChangePlanner } from "./safety/ChangePlanner.js";
 import { RateLimiter } from "./safety/RateLimiter.js";
+import { BatchChangePlanner } from "./safety/BatchChangePlanner.js";
 import { StateCache, AliasResolver } from "./state/StateCache.js";
 import { registerDeviceTools } from "./tools/device.js";
 import { registerSchemaTools } from "./tools/schema.js";
@@ -146,7 +147,8 @@ const viewTools = registerViewTools(driver);
 const processingTools = registerProcessingTools(driver, changePlanner);
 const groupTools = registerGroupTools(driver, changePlanner);
 const bulkTools = registerBulkTools(driver, changePlanner);
-const emergencyTools = registerEmergencyTools(driver, changePlanner);
+const batchPlanner = new BatchChangePlanner(driver, policyEngine, riskEngine, confirmationManager, auditLogger, config.mode);
+const emergencyTools = registerEmergencyTools(driver, changePlanner, batchPlanner);
 const rawTools = registerRawTools(driver, changePlanner);
 
 // Rate limiter: max 12 writes/min, 2s interval, 10s critical cooldown

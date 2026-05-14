@@ -342,6 +342,16 @@ export class FakeWingDriver implements WingDriver {
     }
   }
 
+  // dB helpers for signal summation
+  private static readonly NEG_INF = -120;
+  private sumDb(levels: number[]): number {
+    const active = levels.filter(l => l > FakeWingDriver.NEG_INF + 1);
+    if (active.length === 0) return FakeWingDriver.NEG_INF;
+    // Proper dB summation: 10*log10(sum(10^(dB/10)))
+    const sumLinear = active.reduce((sum, db) => sum + Math.pow(10, db / 10), 0);
+    return 10 * Math.log10(Math.max(sumLinear, 1e-12));
+  }
+
   /** Propagate meter changes based on mixer state changes */
   private propagateMeter(target: string): void {
     const chMatch = target.match(/^\/ch\/(\d+)$/);
@@ -376,15 +386,15 @@ export class FakeWingDriver implements WingDriver {
       const mainMute = this.params.get("/main/lr/mute");
       const isMuted = mainMute?.type === "bool" && mainMute.value === true;
 
-      // Sum all channel post-fader contributions (simplified)
-      let summedDb = -120;
+      // Sum all channel post-fader contributions using proper dB math
+      const channelLevels: number[] = [];
       for (let ch = 1; ch <= 48; ch++) {
         const postMeter = this.params.get(`/ch/${ch}/meter/post_fader`);
-        if (postMeter?.type === "float" && (postMeter.value as number) > -90) {
-          const level = postMeter.value as number;
-          if (level > summedDb) summedDb = level; // simplified peak
+        if (postMeter?.type === "float") {
+          channelLevels.push(postMeter.value as number);
         }
       }
+      const summedDb = this.sumDb(channelLevels);
 
       const mainOut = isMuted ? -120 : summedDb;
       this.params.set("/main/lr/meter/left", { type: "float", value: mainOut, unit: "dBFS" });
@@ -400,23 +410,22 @@ export class FakeWingDriver implements WingDriver {
       const isBusMuted = busMute?.type === "bool" && busMute.value === true;
       const busFaderDb = busFader?.type === "float" ? busFader.value as number : 0;
 
-      // Sum all channel sends to this bus
-      let summedSend = -120;
+      // Sum all channel sends to this bus using proper dB math
+      const sendContribs: number[] = [];
       for (let ch = 1; ch <= 48; ch++) {
         const chMute = this.params.get(`/ch/${ch}/mute`);
-        const isChMuted = chMute?.type === "bool" && chMute.value === true;
-        if (isChMuted) continue;
+        if (chMute?.type === "bool" && chMute.value === true) continue;
         const chPost = this.params.get(`/ch/${ch}/meter/post_fader`);
         const sendLevel = this.params.get(`/ch/${ch}/send/${b}/level`);
         if (chPost?.type === "float" && sendLevel?.type === "float") {
           const postDb = chPost.value as number;
           const sendDb = sendLevel.value as number;
-          if (postDb > -90 && sendDb > -90) {
-            const contrib = postDb + sendDb;
-            if (contrib > summedSend) summedSend = contrib;
+          if (postDb > FakeWingDriver.NEG_INF + 1 && sendDb > FakeWingDriver.NEG_INF + 1) {
+            sendContribs.push(postDb + sendDb);
           }
         }
       }
+      const summedSend = this.sumDb(sendContribs);
 
       const busOut = isBusMuted ? -120 : (busFaderDb < -89 ? -120 : summedSend + busFaderDb);
       this.params.set(`/bus/${b}/meter/post_fader`, { type: "float", value: busOut, unit: "dBFS" });
