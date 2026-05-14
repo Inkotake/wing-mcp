@@ -38,6 +38,7 @@ import { registerBulkTools } from "./tools/bulk.js";
 import { registerEmergencyTools } from "./tools/emergency.js";
 import { registerRawTools } from "./tools/raw.js";
 import { Mode, ToolResult, RISK_MAP, validateMode, VALID_MODES } from "./types.js";
+import { validateAgainstSchema } from "./safety/InputValidator.js";
 
 /** Runtime input validation for common numeric ranges and enums */
 function validateArgs(toolName: string, args: Record<string, unknown>): string | null {
@@ -230,11 +231,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     };
   }
 
-  // Runtime input validation
-  const validationError = validateArgs(toolName, toolArgs);
-  if (validationError) {
+  // Runtime input validation: manual range checks + schema-driven validation
+  const manualError = validateArgs(toolName, toolArgs);
+  if (manualError) {
     return {
-      content: [{ type: "text", text: JSON.stringify({ ok: false, errors: [{ code: "VALUE_OUT_OF_RANGE", message: validationError }], human_summary: `参数校验失败：${validationError}` }) }],
+      content: [{ type: "text", text: JSON.stringify({ ok: false, errors: [{ code: "VALUE_OUT_OF_RANGE", message: manualError }], human_summary: `参数校验失败：${manualError}` }) }],
+      isError: true,
+    };
+  }
+  // Per-tool JSON Schema validation
+  const schemaErrors = validateAgainstSchema(tool.inputSchema, toolArgs, toolName);
+  if (schemaErrors.length > 0) {
+    return {
+      content: [{ type: "text", text: JSON.stringify({ ok: false, errors: schemaErrors.map(e => ({ code: "VALUE_OUT_OF_RANGE", message: e.message })), human_summary: `Schema校验失败：${schemaErrors.map(e => e.message).join("; ")}` }) }],
       isError: true,
     };
   }
