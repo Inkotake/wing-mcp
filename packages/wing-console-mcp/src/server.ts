@@ -21,6 +21,7 @@ import { AuditLogger } from "./safety/AuditLogger.js";
 import { ChangePlanner } from "./safety/ChangePlanner.js";
 import { RateLimiter } from "./safety/RateLimiter.js";
 import { BatchChangePlanner } from "./safety/BatchChangePlanner.js";
+import { wingPropmap } from "./schema/WingPropmap.js";
 import { StateCache, AliasResolver } from "./state/StateCache.js";
 import { registerDeviceTools } from "./tools/device.js";
 import { registerSchemaTools } from "./tools/schema.js";
@@ -514,7 +515,10 @@ async function main() {
     }
   }
 
-  console.error(`[wing-console-mcp] Starting server in ${config.mode} mode, driver: ${config.driver}`);
+  // Load WING propmap for verified parameter paths (from libwing)
+try { wingPropmap.load(); } catch { console.error("[wing-console-mcp] Propmap not loaded (optional)"); }
+
+console.error(`[wing-console-mcp] Starting server in ${config.mode} mode, driver: ${config.driver}, propmap: ${wingPropmap.isLoaded() ? wingPropmap.getEntryCount() + " entries" : "not loaded"}`);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);

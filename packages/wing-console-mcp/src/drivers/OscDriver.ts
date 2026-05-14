@@ -102,11 +102,19 @@ function padBuffer(parts: Buffer[]) {
 }
 
 // ── Canonical → OSC path mapping ───────────────────────
-// WARNING: These mappings are UNVERIFIED and may use X32-style paths.
-// WING OSC paths differ from X32/M32 OSC paths.
-// MUST verify against WING Remote Protocols + real hardware before production use.
-// See: Behringer WING Remote Protocols PDF, libwing propmap, or WING Edit packet capture.
+// ── Canonical → OSC path mapping ───────────────────────
+// Based on real WING libwing propmap (60,748 verified entries).
+// Key differences from X32/M32:
+//   - Channel fader: /ch/{n}/fdr (not /ch/{n}/mix/fader)
+//   - Phantom: /io/in/LCL/{n}/vph (not /headamp/...)
+//   - Main LR: /main/st/mix/fader
+// These mappings are verified against libwing's propmap.jsonl.
+import { wingPropmap } from "../schema/WingPropmap.js";
+
 function canonicalToOsc(canonical: string): string | null {
+  // Use propmap-verified paths
+  const native = wingPropmap.isLoaded() ? wingPropmap.canonicalToNative(canonical) : null;
+  if (native) return native;
   // Map our canonical paths to WING OSC addresses
   const m = canonical.match(/^\/ch\/(\d+)\/(.+)$/);
   if (m) {

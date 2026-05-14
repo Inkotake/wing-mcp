@@ -1,7 +1,8 @@
 import { WingDriver } from "../drivers/WingDriver.js";
 import { ToolResult } from "../types.js";
+import { wingPropmap, WingPropmap } from "../schema/WingPropmap.js";
 
-// Pre-built schema catalog for quick lookup
+// Pre-built schema catalog for quick lookup (fallback when propmap not loaded)
 const SCHEMA_CATALOG: Array<{ path: string; description: string; aliases: string[]; risk: string }> = [
   { path: "/ch/{n}/mute", description: "Channel {n} mute on/off", aliases: ["channel mute", "mute channel", "静音"], risk: "medium" },
   { path: "/ch/{n}/fader", description: "Channel {n} fader level (dB)", aliases: ["channel fader", "fader", "推子", "音量"], risk: "medium" },
@@ -43,18 +44,29 @@ export function registerSchemaTools(driver: WingDriver) {
       },
       handler: async (args: { query: string }): Promise<ToolResult> => {
         const q = args.query.toLowerCase();
-        const results = SCHEMA_CATALOG.filter(
+        // Search static catalog first
+        const catalogResults = SCHEMA_CATALOG.filter(
           (entry) =>
             entry.path.toLowerCase().includes(q) ||
             entry.description.toLowerCase().includes(q) ||
             entry.aliases.some((a) => a.includes(q))
         );
+        // Also search WING propmap if loaded
+        let propmapResults: Array<{ fullname: string; longname: string; type: string }> = [];
+        if (wingPropmap.isLoaded()) {
+          propmapResults = wingPropmap.search(q, 10).map(e => ({
+            fullname: e.fullname,
+            longname: e.longname ?? e.name,
+            type: e.type,
+          }));
+        }
+        const totalResults = catalogResults.length + propmapResults.length;
         return {
           ok: true,
-          data: results,
+          data: { catalog: catalogResults, propmap: propmapResults },
           human_summary:
-            results.length > 0
-              ? `找到 ${results.length} 个匹配的参数：${results.map((r) => `${r.path} — ${r.description} [${r.risk}]`).join("; ")}`
+            totalResults > 0
+              ? `找到 ${totalResults} 个匹配 (catalog: ${catalogResults.length}, propmap: ${propmapResults.length})`
               : `未找到匹配 "${args.query}" 的参数`,
         };
       },
