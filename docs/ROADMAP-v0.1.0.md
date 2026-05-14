@@ -34,9 +34,25 @@
 - [x] OSC driver address-correlated query (not FIFO)
 
 ## Sprint 5: OSC truth test (需要实机)
+- [x] OSC address correlation fix
+- [x] OSC X32-style path WARNING
 - [ ] 阅读 WING Remote Protocols
 - [ ] 实机 read-only smoke test
 - [ ] safe channel low-risk write/restore
 
-## Sprint 6-9: 后续
-- Native/libwing sidecar → Schema catalog → Diagnosis → Release v0.1.0
+## Sprint 6-9: 后续 (需要硬件)
+- [ ] Native/libwing sidecar
+- [ ] Schema catalog v1
+- [ ] Diagnosis v1 (no-sound state machine)
+- [ ] Release gate v0.1.0
+
+## 补充修复 (2026-05-13)
+- [x] PolicyEngine: emergency stop allowed in read_only
+- [x] Emergency: channels_only scope fixed
+- [x] Emergency: snapshot status in wing_emergency_status
+- [x] RateLimiter: rolling window cumulative delta tracking
+- [x] SignalBreakpoint type exported from diagnosis engine
+- [x] SETUP-GUIDE: hardware test warning
+- [x] README: exact confirmation examples
+- [x] README: tool table updated (Matrix/USB/Emergency)
+- [x] No-sound diagnosis tests (7 tests against FakeWing profiles)

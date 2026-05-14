@@ -2,6 +2,8 @@
 
 Complete setup instructions for the WING AI Sound Engineer MCP system.
 
+> **⚠️ HARDWARE WARNING**: This is pre-alpha software. The Fake driver is fully functional for development/testing. The OSC and Native drivers are experimental stubs. **DO NOT connect to a real WING console in a live performance or with PA connected.** Always test with fake driver first. Real hardware testing requires `WING_HARDWARE_TEST=1` and should only be done on unused channels with monitors disconnected.
+
 ---
 
 ## Table of Contents

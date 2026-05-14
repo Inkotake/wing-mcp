@@ -102,6 +102,9 @@ WING_DRIVER=fake WING_MODE=rehearsal_safe npx wing-console-mcp
 | 计量 | `wing_meter_catalog` `wing_meter_read` `wing_signal_check` |
 | 诊断 | `sound_diagnosis_start` `sound_diagnosis_next_step` `sound_diagnosis_prepare/apply_fix` |
 | 调试 | `wing_debug_dump_state` `wing_usb_recorder_get` |
+| Matrix | `wing_matrix_list` `wing_matrix_set_mute_prepare/apply` `wing_matrix_adjust_fader_prepare/apply` |
+| USB录音 | `wing_usb_recorder_get` `wing_usb_recorder_record_prepare/apply` `wing_usb_recorder_stop_prepare/apply` |
+| 紧急 | `wing_emergency_stop/apply` `wing_emergency_status` `wing_emergency_reset/apply` |
 | Raw | `wing_raw_osc_prepare/apply` `wing_raw_native_prepare/apply` (默认禁用) |
 
 ## 安全模型
@@ -158,12 +161,12 @@ AI: → wing_param_resolve("鼓手耳返") → Bus 1
     → wing_send_get(ch=1, bus=1) → -45 dB (太低!)
 
 AI: 问题定位：主唱到鼓手耳返的发送量太低。
-    建议：CH 1 → Bus 1 从 -45dB 调到 -10dB
+    建议：CH 1 → Bus 1 从 -45dB 调到 -10dB (delta: 35dB — 将分步执行)
 
     [准备修改] 确认ID: conf-abc123
-    确认执行："确认把主唱到鼓手耳返提高35dB"
+    确认执行："确认把主唱 (CH 1) 到鼓手耳返 (Bus 1) 发送量从 -45 dB 调到 -10 dB"
 
-User: 确认
+User: 确认把主唱 (CH 1) 到鼓手耳返 (Bus 1) 发送量从 -45 dB 调到 -10 dB
 
 AI: ✓ 已完成 — CH 1 → Bus 1: -45.0 dB → -10.0 dB, 回读 -10.0 dB
     审计编号 aud_xyz789
