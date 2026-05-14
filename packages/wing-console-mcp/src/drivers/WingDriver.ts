@@ -255,10 +255,15 @@ export class FakeWingDriver implements WingDriver {
     if (!this.connected) throw new Error("DEVICE_DISCONNECTED");
     this.maybeInjectFault();
     if (Math.random() < this.faultConfig.readbackMismatchProbability) {
-      // Simulate a mismatch by not setting
       return;
     }
     this.params.set(path, { ...value });
+
+    // Signal propagation: update dependent meters when state changes
+    if (path.match(/^\/(ch\/\d+|main\/lr)\/(mute|fader|source|gate\/.*)$/)) {
+      const target = path.replace(/\/(mute|fader|source|gate\/.*)$/, "");
+      this.propagateMeter(target);
+    }
   }
 
   async getNode(path: string): Promise<Record<string, WingValue>> {
@@ -295,24 +300,80 @@ export class FakeWingDriver implements WingDriver {
         break;
       case "muted_ch1":
         this.params.set("/ch/1/mute", { type: "bool", value: true });
+        this.propagateMeter("/ch/1");
         break;
       case "fader_down_ch1":
         this.params.set("/ch/1/fader", { type: "float", value: -90.0, unit: "dB" });
+        this.propagateMeter("/ch/1");
         break;
       case "gate_closed_ch1":
         this.params.set("/ch/1/gate/threshold", { type: "float", value: 10.0, unit: "dB" });
         this.params.set("/ch/1/gate/on", { type: "bool", value: true });
+        this.propagateMeter("/ch/1");
         break;
       case "main_muted":
         this.params.set("/main/lr/mute", { type: "bool", value: true });
+        this.propagateMeter("/main/lr");
         break;
       case "routing_wrong":
         this.params.set("/ch/1/source", { type: "string", value: "None" });
+        this.params.set("/ch/1/meter/input", { type: "float", value: -120.0, unit: "dBFS" });
+        this.params.set("/ch/1/meter/pre_fader", { type: "float", value: -120.0, unit: "dBFS" });
+        this.params.set("/ch/1/meter/post_fader", { type: "float", value: -120.0, unit: "dBFS" });
         break;
       case "normal":
       default:
-        // Reset to default values is handled by re-init
         break;
+    }
+  }
+
+  /** Propagate meter changes based on mixer state changes */
+  private propagateMeter(target: string): void {
+    const chMatch = target.match(/^\/ch\/(\d+)$/);
+    if (chMatch) {
+      const ch = parseInt(chMatch[1]);
+      const input = this.params.get(`/ch/${ch}/meter/input`);
+      const mute = this.params.get(`/ch/${ch}/mute`);
+      const fader = this.params.get(`/ch/${ch}/fader`);
+      const gateOn = this.params.get(`/ch/${ch}/gate/on`);
+      const gateThresh = this.params.get(`/ch/${ch}/gate/threshold`);
+      const source = this.params.get(`/ch/${ch}/source`);
+
+      const hasSource = source?.type === "string" && source.value !== "None";
+      const inputLevel = (input?.type === "float" ? input.value as number : -18);
+      const isMuted = mute?.type === "bool" && mute.value === true;
+      const faderDb = fader?.type === "float" ? fader.value as number : 0;
+      const gateActive = gateOn?.type === "bool" && gateOn.value === true;
+      const gateDb = gateThresh?.type === "float" ? gateThresh.value as number : -80;
+
+      const effectiveInput = hasSource ? inputLevel : -120;
+      const gateClamped = gateActive && effectiveInput < gateDb;
+      const preFader = gateClamped ? -120 : effectiveInput;
+      const postFader = isMuted ? -120 : (faderDb < -89 ? -120 : preFader + faderDb);
+
+      this.params.set(`/ch/${ch}/meter/input`, { type: "float", value: effectiveInput, unit: "dBFS" });
+      this.params.set(`/ch/${ch}/meter/pre_fader`, { type: "float", value: preFader, unit: "dBFS" });
+      this.params.set(`/ch/${ch}/meter/post_fader`, { type: "float", value: postFader, unit: "dBFS" });
+    }
+
+    // Main LR propagation
+    if (target === "/main/lr") {
+      const mainMute = this.params.get("/main/lr/mute");
+      const isMuted = mainMute?.type === "bool" && mainMute.value === true;
+
+      // Sum all channel post-fader contributions (simplified)
+      let summedDb = -120;
+      for (let ch = 1; ch <= 48; ch++) {
+        const postMeter = this.params.get(`/ch/${ch}/meter/post_fader`);
+        if (postMeter?.type === "float" && (postMeter.value as number) > -90) {
+          const level = postMeter.value as number;
+          if (level > summedDb) summedDb = level; // simplified peak
+        }
+      }
+
+      const mainOut = isMuted ? -120 : summedDb;
+      this.params.set("/main/lr/meter/left", { type: "float", value: mainOut, unit: "dBFS" });
+      this.params.set("/main/lr/meter/right", { type: "float", value: mainOut, unit: "dBFS" });
     }
   }
 
