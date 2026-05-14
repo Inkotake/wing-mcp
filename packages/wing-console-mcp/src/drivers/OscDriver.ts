@@ -112,10 +112,14 @@ function padBuffer(parts: Buffer[]) {
 import { wingPropmap } from "../schema/WingPropmap.js";
 
 function canonicalToOsc(canonical: string): string | null {
-  // Use propmap-verified paths
+  // Only use propmap-verified paths. No X32 fallback.
+  // Set WING_ALLOW_UNVERIFIED_OSC_PATHS=1 to enable X32-style backup (dev only)
   const native = wingPropmap.isLoaded() ? wingPropmap.canonicalToNative(canonical) : null;
   if (native) return native;
-  // Map our canonical paths to WING OSC addresses
+
+  // Unverified fallback: X32-style paths. DISABLED by default.
+  if (process.env.WING_ALLOW_UNVERIFIED_OSC_PATHS !== "1") return null;
+
   const m = canonical.match(/^\/ch\/(\d+)\/(.+)$/);
   if (m) {
     const ch = m[1].padStart(2, "0");

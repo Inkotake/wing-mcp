@@ -8,7 +8,7 @@
     "wing-console-mcp": "./dist/server.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node --input-type=module -e \"import{cp,mkdir}from'node:fs/promises';await mkdir('dist/schema',{recursive:true});await cp('src/schema/propmap.jsonl','dist/schema/propmap.jsonl')\"",
     "test": "vitest run",
     "test:watch": "vitest",
     "clean": "rm -rf dist/"

@@ -259,10 +259,9 @@ export class FakeWingDriver implements WingDriver {
     }
     this.params.set(path, { ...value });
 
-    // Signal propagation: update dependent meters when state changes
-    if (path.match(/^\/(ch\/\d+|bus\/\d+|main\/lr)\/(mute|fader|source|gate\/.*)$/)) {
-      const target = path.replace(/\/(mute|fader|source|gate\/.*)$/, "");
-      this.propagateMeter(target);
+    // Signal propagation: any signal-affecting change triggers full meter recompute
+    if (path.match(/^\/(ch\/\d+|bus\/\d+|main\/lr|dca\/\d+)\/(mute|fader|fdr|source|gate\/|on|send\/)/)) {
+      this.recomputeAllMeters();
     }
   }
 
@@ -270,12 +269,20 @@ export class FakeWingDriver implements WingDriver {
     if (!this.connected) throw new Error("DEVICE_DISCONNECTED");
     this.maybeInjectFault();
     const result: Record<string, WingValue> = {};
+    const prefix = path.endsWith("/") ? path : path + "/";
     for (const [key, value] of this.params) {
-      if (key.startsWith(path)) {
+      if (key === path || key.startsWith(prefix)) {
         result[key] = { ...value };
       }
     }
     return result;
+  }
+
+  /** Full recompute of all meters from current state */
+  private recomputeAllMeters(): void {
+    for (let ch = 1; ch <= 48; ch++) this.propagateMeter(`/ch/${ch}`);
+    for (let b = 1; b <= 16; b++) this.propagateMeter(`/bus/${b}`);
+    this.propagateMeter("/main/lr");
   }
 
   async setNode(path: string, patch: Record<string, WingValue>): Promise<void> {
