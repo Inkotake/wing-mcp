@@ -17,7 +17,7 @@ export class AuditLogger {
 
   constructor(sessionId?: string, auditDir?: string) {
     this.sessionId = sessionId ?? `sess_${Date.now()}`;
-    this.auditDir = auditDir ?? process.env.WING_AUDIT_PATH ?? path.join(process.cwd(), "data", "audit");
+    this.auditDir = auditDir ?? process.env.WING_AUDIT_DIR ?? process.env.WING_AUDIT_PATH ?? path.join(process.cwd(), "data", "audit");
     this.ensureDir();
     this.openStream();
   }
@@ -80,7 +80,7 @@ export class AuditLogger {
       old_value: params.oldValue,
       requested_value: params.requestedValue,
       readback_value: params.readbackValue,
-      confirmation_text: confirmationHash,
+      confirmation_hash: confirmationHash,
       result: params.result,
       driver: params.driver,
     };

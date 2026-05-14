@@ -77,7 +77,7 @@ export interface AuditRecord {
   old_value: unknown;
   requested_value: unknown;
   readback_value: unknown;
-  confirmation_text?: string;
+  confirmation_hash?: string;
   result: "success" | "denied" | "failed" | "readback_mismatch";
   driver: DriverKind;
 }
@@ -246,7 +246,7 @@ export const AuditRecordSchema = z.object({
   old_value: z.unknown(),
   requested_value: z.unknown(),
   readback_value: z.unknown(),
-  confirmation_text: z.string().optional(),
+  confirmation_hash: z.string().optional(),
   result: z.enum(["success", "denied", "failed", "readback_mismatch"]),
   driver: z.enum(["native", "osc", "fake"]),
 });

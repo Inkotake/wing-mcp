@@ -2,6 +2,17 @@ import { WingDriver } from "../drivers/WingDriver.js";
 import { ToolResult, WingValue } from "../types.js";
 import { ChangePlanner } from "../safety/ChangePlanner.js";
 
+/** Approved fix templates — restricts what diagnosis can auto-prepare */
+const APPROVED_FIXES: Record<string, { tool: string; maxRisk: string; maxDeltaDb?: number; description: string }> = {
+  unmute_channel: { tool: "wing_channel_set_mute_prepare", maxRisk: "medium", description: "Unmute a channel" },
+  raise_channel_small: { tool: "wing_channel_adjust_fader_prepare", maxRisk: "medium", maxDeltaDb: 3, description: "Small fader boost" },
+  lower_channel_small: { tool: "wing_channel_adjust_fader_prepare", maxRisk: "medium", maxDeltaDb: 3, description: "Small fader cut" },
+  raise_send_small: { tool: "wing_send_adjust_prepare", maxRisk: "medium", maxDeltaDb: 3, description: "Small send boost" },
+  lower_send_small: { tool: "wing_send_adjust_prepare", maxRisk: "medium", maxDeltaDb: 3, description: "Small send cut" },
+  unmute_bus: { tool: "wing_channel_set_mute_prepare", maxRisk: "medium", description: "Unmute a bus" },
+};
+// BLOCKED: phantom, routing, scene recall, snapshot, raw, main fader/mute, DCA, mute group
+
 /**
  * Diagnosis Session State Machine
  *
@@ -200,6 +211,7 @@ export function registerDiagnosisTools(driver: WingDriver, changePlanner: Change
       handler: async (args: {
         session_id: string;
         fix_description: string;
+        fix_template: string;
         tool_to_use: string;
         target_path: string;
         target_value: WingValue;
@@ -207,6 +219,14 @@ export function registerDiagnosisTools(driver: WingDriver, changePlanner: Change
         const session = sessions.get(args.session_id);
         if (!session) {
           return { ok: false, errors: [{ code: "PARAM_NOT_FOUND", message: "Session not found." }], human_summary: "诊断会话未找到。" };
+        }
+        // Validate against approved fix templates
+        const template = APPROVED_FIXES[args.fix_template];
+        if (!template) {
+          return { ok: false, errors: [{ code: "POLICY_DENIED", message: `Fix template '${args.fix_template}' not approved. Use: ${Object.keys(APPROVED_FIXES).join(", ")}` }], human_summary: `诊断修复模板未批准。可用: ${Object.keys(APPROVED_FIXES).join(", ")}` };
+        }
+        if (args.tool_to_use !== template.tool) {
+          return { ok: false, errors: [{ code: "POLICY_DENIED", message: `Tool mismatch: template expects ${template.tool}` }], human_summary: "工具不匹配批准的修复模板。" };
         }
         session.state = "fix_prepare";
         return changePlanner.prepareWrite(
