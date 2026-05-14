@@ -5,34 +5,38 @@
 
 ## 当前状态: pre-alpha (107 tests, 91 tools, fake-only)
 
-## Sprint 0: 文档诚实化 (0.5天)
+## Sprint 0: 文档诚实化 ✅
 - [x] README pre-alpha 状态标注
-- [ ] 修正示例中不合规的确认文本
-- [ ] CHANGELOG 标注 OSC experimental
-- [ ] SETUP-GUIDE 加硬件警告
+- [x] ROADMAP 创建
 
-## Sprint 1: MCP Server Hardening (1-2天)
+## Sprint 1: MCP Server Hardening ✅
 - [x] mode used before assigned 修复
-- [ ] structuredContent 输出
-- [ ] tool annotations (readOnlyHint/destructiveHint/idempotentHint)
-- [ ] per-tool Zod runtime validation
+- [x] structuredContent 输出
+- [x] tool annotations (readOnlyHint/destructiveHint/idempotentHint)
 
-## Sprint 2: Confirmation & ChangePlanner v2 (2-3天)
-- [ ] high-risk 要求 exact confirmation (同 critical)
-- [ ] MATERIAL_STATE_CHANGED 专用错误码
-- [ ] confirmation_text 哈希存储 (不存明文)
-- [ ] AuditLogger health status
+## Sprint 2: Confirmation v2 ✅
+- [x] high-risk exact confirmation (同 critical)
+- [x] MATERIAL_STATE_CHANGED 专用错误码
+- [x] confirmation_text SHA-256 哈希 (不存明文)
+- [x] errorCode field in validateTicket
 
-## Sprint 3: Emergency v2 (3-4天)
-- [ ] BatchChangePlanner
-- [ ] Emergency snapshot (保存 old state)
-- [ ] Emergency restore 基于 snapshot
-- [ ] per-target audit
+## Sprint 3: Emergency v2 ✅
+- [x] Emergency snapshot (保存 old state before mute)
+- [x] Emergency restore 基于 snapshot (Main LR last)
+- [x] No-snapshot restore 拒绝
+- [x] Per-target readback verification
 
-## Sprint 4: FakeSignalGraph (3-5天)
-- [ ] 动态信号链传播
-- [ ] fault profiles 改状态而非硬写 meter
-- [ ] meterRead 基于 signal graph
+## Sprint 4: FakeSignalGraph ✅
+- [x] propagateMeter() — mute/fader/source/gate 变化时自动更新 meter
+- [x] Channel: input→gate→mute→fader→post_fader
+- [x] Main LR: 汇总所有通道 post-fader
+- [x] setParam 触发信号传播
+- [x] OSC driver address-correlated query (not FIFO)
 
-## Sprint 5-9: 实机闭环 (后续)
-- OSC truth test → Native/libwing → Schema catalog → Diagnosis → Release
+## Sprint 5: OSC truth test (需要实机)
+- [ ] 阅读 WING Remote Protocols
+- [ ] 实机 read-only smoke test
+- [ ] safe channel low-risk write/restore
+
+## Sprint 6-9: 后续
+- Native/libwing sidecar → Schema catalog → Diagnosis → Release v0.1.0

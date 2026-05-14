@@ -182,8 +182,8 @@ export class OscDriver implements WingDriver {
   private host: string;
   private port: number;
   private timeout: number;
-  private pendingRequests: Map<string, { resolve: (v: WingValue) => void; reject: (e: Error) => void }> = new Map();
-  private requestId = 0;
+  // Address-correlated pending queries: oscPath → queue of resolvers
+  private pendingByAddress: Map<string, Array<{ resolve: (v: WingValue) => void; reject: (e: Error) => void; timer: NodeJS.Timeout }>> = new Map();
 
   constructor(host?: string, port?: number, timeout?: number) {
     this.host = host ?? process.env.WING_HOST ?? "192.168.1.62";
@@ -290,19 +290,26 @@ export class OscDriver implements WingDriver {
     this.controlSocket.on("message", (msg) => {
       const decoded = oscDecode(msg);
       if (decoded) {
-        // Match response to pending request by path
-        for (const [id, pending] of this.pendingRequests) {
-          pending.resolve({ type: "float", value: (decoded.args[0]?.value as number) ?? 0 });
-          this.pendingRequests.delete(id);
-          break; // one response per request
+        // Match response to pending request by OSC address
+        const queue = this.pendingByAddress.get(decoded.path);
+        if (queue && queue.length > 0) {
+          const pending = queue.shift()!;
+          clearTimeout(pending.timer);
+          const val = decoded.args[0];
+          const wv: WingValue = val?.type === "s"
+            ? { type: "string", value: String(val.value ?? "") }
+            : val?.type === "i"
+            ? { type: "int", value: Number(val.value ?? 0) }
+            : { type: "float", value: Number(val.value ?? 0) };
+          pending.resolve(wv);
         }
       }
     });
     this.controlSocket.on("error", (err) => {
-      for (const [, pending] of this.pendingRequests) {
-        pending.reject(new Error(`OSC socket error: ${err.message}`));
+      for (const [, queue] of this.pendingByAddress) {
+        for (const p of queue) { clearTimeout(p.timer); p.reject(new Error(`OSC socket error: ${err.message}`)); }
       }
-      this.pendingRequests.clear();
+      this.pendingByAddress.clear();
     });
   }
 
@@ -328,26 +335,38 @@ export class OscDriver implements WingDriver {
     });
   }
 
-  private queryOsc(path: string): Promise<WingValue> {
+  private queryOsc(osPath: string): Promise<WingValue> {
     return new Promise((resolve, reject) => {
       if (!this.controlSocket) return reject(new Error("DEVICE_DISCONNECTED"));
-      const id = String(++this.requestId);
       const timer = setTimeout(() => {
-        this.pendingRequests.delete(id);
+        const queue = this.pendingByAddress.get(osPath);
+        if (queue) {
+          const idx = queue.findIndex(p => p.resolve === resolve);
+          if (idx >= 0) queue.splice(idx, 1);
+        }
         reject(new Error("DRIVER_TIMEOUT"));
       }, this.timeout);
 
-      this.pendingRequests.set(id, {
-        resolve: (v) => { clearTimeout(timer); resolve(v); },
-        reject: (e) => { clearTimeout(timer); reject(e); },
-      });
+      const entry = { resolve, reject, timer };
+      if (!this.pendingByAddress.has(osPath)) {
+        this.pendingByAddress.set(osPath, []);
+      }
+      this.pendingByAddress.get(osPath)!.push(entry);
 
-      // Send OSC query (type tag with no args = query)
-      const addrBuf = Buffer.from(path + "\0");
+      // Send OSC query
+      const addrBuf = Buffer.from(osPath + "\0");
       const pad = (4 - (addrBuf.length & 3)) & 3;
       const msg = Buffer.concat([addrBuf, Buffer.alloc(pad), Buffer.from(",?\0\0")]);
       this.controlSocket.send(msg, this.port, this.host, (err) => {
-        if (err) { clearTimeout(timer); this.pendingRequests.delete(id); reject(err); }
+        if (err) {
+          clearTimeout(timer);
+          const queue = this.pendingByAddress.get(osPath);
+          if (queue) {
+            const idx = queue.findIndex(p => p.timer === timer);
+            if (idx >= 0) queue.splice(idx, 1);
+          }
+          reject(err);
+        }
       });
     });
   }
