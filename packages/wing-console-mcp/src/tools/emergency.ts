@@ -1,6 +1,7 @@
 import { WingDriver } from "../drivers/WingDriver.js";
 import { ToolResult, WingValue } from "../types.js";
 import { ChangePlanner } from "../safety/ChangePlanner.js";
+import { valuesEqual } from "../safety/ConfirmationManager.js";
 
 /**
  * Emergency Tools — Panic Mute, Emergency Stop, All-Mute
@@ -15,6 +16,8 @@ import { ChangePlanner } from "../safety/ChangePlanner.js";
 
 let emergencyActive = false;
 let emergencyTimestamp: string | null = null;
+// Snapshot of mute/fader states saved before emergency stop, used for safe restore
+let emergencySnapshot: Array<{ path: string; oldValue: WingValue }> | null = null;
 
 export function registerEmergencyTools(driver: WingDriver, changePlanner: ChangePlanner) {
   return {
@@ -105,6 +108,19 @@ export function registerEmergencyTools(driver: WingDriver, changePlanner: Change
           for (let d = 1; d <= 8; d++) paths.push(`/dca/${d}/mute`);
         }
 
+        // Save snapshot BEFORE muting (for safe restore later)
+        const snapshot: Array<{ path: string; oldValue: WingValue }> = [];
+        for (const path of paths) {
+          try {
+            const oldVal = await driver.getParam(path);
+            snapshot.push({ path, oldValue: oldVal });
+          } catch {
+            snapshot.push({ path, oldValue: { type: "bool", value: false } });
+          }
+        }
+        emergencySnapshot = snapshot;
+
+        // Now mute all targets with per-target readback
         const results: string[] = [];
         const errors: string[] = [];
 
@@ -197,37 +213,45 @@ export function registerEmergencyTools(driver: WingDriver, changePlanner: Change
       handler: async (args: {
         reason: string; confirmation_id: string; confirmation_text?: string;
       }): Promise<ToolResult> => {
+        // Require a snapshot to restore from — refuse blind unmute
+        if (!emergencySnapshot || emergencySnapshot.length === 0) {
+          return {
+            ok: false,
+            errors: [{ code: "POLICY_DENIED", message: "No emergency snapshot available. Cannot blindly unmute — restore manually." }],
+            human_summary: "⚠️ 无紧急快照，拒绝自动恢复。请手动逐步解除静音。",
+          };
+        }
+
         const unmuteVal: WingValue = { type: "bool", value: false };
 
-        // Validate the Main LR unmute via changePlanner
+        // Validate the Main LR unmute via changePlanner first
         const validationResult = await changePlanner.applyWrite(
           "wing_emergency_reset_apply",
           "/main/lr/mute",
           unmuteVal,
-          `[EMERGENCY RESET] ${args.reason}`,
+          `[EMERGENCY RESET] ${args.reason} — restoring from snapshot`,
           args.confirmation_id,
           args.confirmation_text
         );
 
         if (!validationResult.ok) return validationResult;
 
-        // Unmute all targets
-        const paths = ["/main/lr/mute"];
-        for (let ch = 1; ch <= 48; ch++) paths.push(`/ch/${ch}/mute`);
-        for (let b = 1; b <= 16; b++) paths.push(`/bus/${b}/mute`);
-        for (let d = 1; d <= 8; d++) paths.push(`/dca/${d}/mute`);
-
+        // Restore from snapshot: each target back to its pre-emergency value
         const results: string[] = [];
         const errors: string[] = [];
 
-        for (const path of paths) {
+        // Restore in safe order: Main LR LAST
+        const mainEntry = emergencySnapshot.find(s => s.path === "/main/lr/mute");
+        const otherEntries = emergencySnapshot.filter(s => s.path !== "/main/lr/mute");
+
+        for (const { path, oldValue } of [...otherEntries, ...(mainEntry ? [mainEntry] : [])]) {
           try {
-            await driver.setParam(path, unmuteVal);
+            await driver.setParam(path, oldValue);
             const rb = await driver.getParam(path);
-            if (rb.type === "bool" && rb.value === false) {
-              results.push(`${path}: unmuted`);
+            if (valuesEqual(rb, oldValue)) {
+              results.push(`${path}: restored to ${JSON.stringify(oldValue)}`);
             } else {
-              errors.push(`${path}: readback mismatch`);
+              errors.push(`${path}: readback mismatch (expected ${JSON.stringify(oldValue)}, got ${JSON.stringify(rb)})`);
             }
           } catch (e: any) {
             errors.push(`${path}: ${e.message}`);
@@ -236,12 +260,13 @@ export function registerEmergencyTools(driver: WingDriver, changePlanner: Change
 
         emergencyActive = errors.length > 0;
         emergencyTimestamp = null;
+        emergencySnapshot = null;
 
         return {
           ok: errors.length === 0,
-          data: { targets_unmuted: results.length, targets_failed: errors.length },
+          data: { targets_restored: results.length, targets_failed: errors.length },
           human_summary: errors.length === 0
-            ? `✅ 紧急状态已解除: ${results.length} 个目标已取消静音`
+            ? `✅ 紧急状态已解除: ${results.length} 个目标已恢复至紧急前状态`
             : `⚠️ 紧急状态部分解除: ${results.length} 成功, ${errors.length} 失败 — 紧急状态保持激活`,
         };
       },
