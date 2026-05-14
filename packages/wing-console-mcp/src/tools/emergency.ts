@@ -248,38 +248,40 @@ export function registerEmergencyTools(
 
         if (!validationResult.ok) return validationResult;
 
-        // Restore from snapshot: each target back to its pre-emergency value
-        const results: string[] = [];
-        const errors: string[] = [];
-
-        // Restore in safe order: Main LR LAST
+        // Restore from snapshot: use BatchChangePlanner for per-target audit
         const mainEntry = emergencySnapshot.find(s => s.path === "/main/lr/mute");
         const otherEntries = emergencySnapshot.filter(s => s.path !== "/main/lr/mute");
+        const orderedOps = [...otherEntries, ...(mainEntry ? [mainEntry] : [])];
 
-        for (const { path, oldValue } of [...otherEntries, ...(mainEntry ? [mainEntry] : [])]) {
-          try {
-            await driver.setParam(path, oldValue);
-            const rb = await driver.getParam(path);
-            if (valuesEqual(rb, oldValue)) {
-              results.push(`${path}: restored to ${JSON.stringify(oldValue)}`);
-            } else {
-              errors.push(`${path}: readback mismatch (expected ${JSON.stringify(oldValue)}, got ${JSON.stringify(rb)})`);
-            }
-          } catch (e: any) {
-            errors.push(`${path}: ${e.message}`);
+        let totalOk = 0, totalFail = 0;
+        if (bp) {
+          const result = await bp.executeBatch(
+            orderedOps.map(s => ({ target: s.path, requestedValue: s.oldValue, reason: `[EMERGENCY RESET] ${args.reason}` })),
+            "wing_emergency_reset_apply", args.confirmation_id, args.confirmation_text,
+          );
+          totalOk = result.successCount;
+          totalFail = result.failCount;
+        } else {
+          for (const { path, oldValue } of orderedOps) {
+            try {
+              await driver.setParam(path, oldValue);
+              const rb = await driver.getParam(path);
+              if (valuesEqual(rb, oldValue)) totalOk++;
+              else totalFail++;
+            } catch { totalFail++; }
           }
         }
 
-        emergencyActive = errors.length > 0;
+        emergencyActive = totalFail > 0;
         emergencyTimestamp = null;
         emergencySnapshot = null;
 
         return {
-          ok: errors.length === 0,
-          data: { targets_restored: results.length, targets_failed: errors.length },
-          human_summary: errors.length === 0
-            ? `✅ 紧急状态已解除: ${results.length} 个目标已恢复至紧急前状态`
-            : `⚠️ 紧急状态部分解除: ${results.length} 成功, ${errors.length} 失败 — 紧急状态保持激活`,
+          ok: totalFail === 0,
+          data: { targets_restored: totalOk, targets_failed: totalFail },
+          human_summary: totalFail === 0
+            ? `✅ 紧急状态已解除: ${totalOk} 个目标已恢复至紧急前状态`
+            : `⚠️ 紧急状态部分解除: ${totalOk} 成功, ${totalFail} 失败 — 紧急状态保持激活`,
         };
       },
     },

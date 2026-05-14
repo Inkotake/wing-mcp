@@ -294,9 +294,9 @@ export class FakeWingDriver implements WingDriver {
     this.activeProfile = profile;
     switch (profile) {
       case "no_input_ch1":
-        this.params.set("/ch/1/meter/input", { type: "float", value: -120.0, unit: "dBFS" });
-        this.params.set("/ch/1/meter/pre_fader", { type: "float", value: -120.0, unit: "dBFS" });
-        this.params.set("/ch/1/meter/post_fader", { type: "float", value: -120.0, unit: "dBFS" });
+        // State-based: remove source to simulate unplugged cable
+        this.params.set("/ch/1/source", { type: "string", value: "None" });
+        this.propagateMeter("/ch/1");
         break;
       case "muted_ch1":
         this.params.set("/ch/1/mute", { type: "bool", value: true });
@@ -333,8 +333,9 @@ export class FakeWingDriver implements WingDriver {
         this.propagateMeter("/bus/1");
         break;
       case "output_patch_wrong":
-        this.params.set("/main/lr/meter/left", { type: "float", value: -120.0, unit: "dBFS" });
-        this.params.set("/main/lr/meter/right", { type: "float", value: -120.0, unit: "dBFS" });
+        // Simulate wrong output routing by disconnecting Main LR from outputs
+        this.params.set("/main/lr/mute", { type: "bool", value: true });
+        this.propagateMeter("/main/lr");
         break;
       case "normal":
       default:
