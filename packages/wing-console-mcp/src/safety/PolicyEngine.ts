@@ -15,12 +15,22 @@ export class PolicyEngine {
   ) {}
 
   decide(req: ChangeRequest): PolicyDecision {
-    // Read-only mode: deny all non-none risk writes
+    // Read-only mode: deny all non-none risk writes EXCEPT emergency stop
     if (this.mode === "read_only" && req.risk !== "none") {
+      // Emergency stop is allowed even in read_only (life/safety)
+      const isEmergencyStop = req.tool.includes("emergency_stop") && !req.tool.includes("reset");
+      if (!isEmergencyStop) {
+        return {
+          allowed: false,
+          requiresConfirmation: false,
+          reasons: ["System is in read-only mode. No writes allowed."],
+        };
+      }
+      // Emergency stop in read_only still requires exact confirmation
       return {
-        allowed: false,
-        requiresConfirmation: false,
-        reasons: ["System is in read-only mode. No writes allowed."],
+        allowed: true,
+        requiresConfirmation: true,
+        reasons: ["Emergency stop allowed in read_only — exact confirmation required."],
       };
     }
 

@@ -102,7 +102,11 @@ export function registerEmergencyTools(driver: WingDriver, changePlanner: Change
         // Compute the full target list to mute
         const paths: string[] = [];
         if (scope === "main_only" || scope === "all") paths.push("/main/lr/mute");
-        if (scope === "channels_only" || scope === "all") {
+        if (scope === "channels_only") {
+          // channels_only = mute channels only, leave buses/DCAs alone
+          for (let ch = 1; ch <= 48; ch++) paths.push(`/ch/${ch}/mute`);
+        }
+        if (scope === "all") {
           for (let ch = 1; ch <= 48; ch++) paths.push(`/ch/${ch}/mute`);
           for (let b = 1; b <= 16; b++) paths.push(`/bus/${b}/mute`);
           for (let d = 1; d <= 8; d++) paths.push(`/dca/${d}/mute`);
@@ -170,9 +174,11 @@ export function registerEmergencyTools(driver: WingDriver, changePlanner: Change
           data: {
             emergencyActive,
             emergencyTimestamp,
+            snapshotAvailable: emergencySnapshot !== null && emergencySnapshot.length > 0,
+            snapshotTargetCount: emergencySnapshot?.length ?? 0,
           },
           human_summary: emergencyActive
-            ? `🚨 紧急停止激活中 (since ${emergencyTimestamp})`
+            ? `🚨 紧急停止激活中 (since ${emergencyTimestamp}, snapshot: ${emergencySnapshot?.length ?? 0} targets)`
             : "✅ 无紧急状态",
         };
       },

@@ -90,6 +90,31 @@ export class RateLimiter {
     this.criticalCooldownUntil = 0;
   }
 
+  // Rolling window: per-target cumulative delta tracking to prevent death-by-1000-cuts
+  private targetDeltas: Map<string, Array<{ time: number; delta: number }>> = new Map();
+
+  checkCumulativeDelta(target: string, deltaDb: number, windowSec: number, maxCumulativeDb: number): { allowed: boolean; reason?: string } {
+    const now = Date.now();
+    if (!this.targetDeltas.has(target)) {
+      this.targetDeltas.set(target, []);
+    }
+    const history = this.targetDeltas.get(target)!;
+    // Remove entries outside the window
+    const cutoff = now - windowSec * 1000;
+    while (history.length > 0 && history[0].time < cutoff) {
+      history.shift();
+    }
+    const cumulative = history.reduce((sum, entry) => sum + Math.abs(entry.delta), 0) + Math.abs(deltaDb);
+    if (cumulative > maxCumulativeDb) {
+      return {
+        allowed: false,
+        reason: `Cumulative delta ${cumulative.toFixed(1)}dB exceeds ${maxCumulativeDb}dB limit in ${windowSec}s window for ${target}.`,
+      };
+    }
+    history.push({ time: now, delta: deltaDb });
+    return { allowed: true };
+  }
+
   getStats() {
     return {
       writesThisMinute: this.writes.count,

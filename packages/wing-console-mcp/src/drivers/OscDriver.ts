@@ -102,6 +102,10 @@ function padBuffer(parts: Buffer[]) {
 }
 
 // ── Canonical → OSC path mapping ───────────────────────
+// WARNING: These mappings are UNVERIFIED and may use X32-style paths.
+// WING OSC paths differ from X32/M32 OSC paths.
+// MUST verify against WING Remote Protocols + real hardware before production use.
+// See: Behringer WING Remote Protocols PDF, libwing propmap, or WING Edit packet capture.
 function canonicalToOsc(canonical: string): string | null {
   // Map our canonical paths to WING OSC addresses
   const m = canonical.match(/^\/ch\/(\d+)\/(.+)$/);
