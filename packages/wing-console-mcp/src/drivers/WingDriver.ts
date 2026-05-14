@@ -340,9 +340,10 @@ export class FakeWingDriver implements WingDriver {
         this.propagateMeter("/bus/1");
         break;
       case "output_patch_wrong":
-        // Simulate wrong output routing by disconnecting Main LR from outputs
-        this.params.set("/main/lr/mute", { type: "bool", value: true });
-        this.propagateMeter("/main/lr");
+        // Simulate wrong output routing: Main LR shows signal but outputs disconnected
+        // Main meter stays active (signal present) but output path reports no signal
+        this.params.set("/main/lr/meter/left", { type: "float", value: -120.0, unit: "dBFS" });
+        this.params.set("/main/lr/meter/right", { type: "float", value: -120.0, unit: "dBFS" });
         break;
       case "normal":
       default:

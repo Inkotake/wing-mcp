@@ -149,8 +149,9 @@ export function registerEmergencyTools(
           batchResult = { successCount: ok + 1, failCount: fail, operations: ops }; // +1 for Main LR already done
         }
 
-        // Only clear emergency if ALL targets muted successfully
-        emergencyActive = batchResult.failCount > 0;
+        // Emergency stop success: emergencyActive = true (NOT false)
+        // Only reset_apply full success clears it
+        emergencyActive = true;
 
         return {
           ok: batchResult.failCount === 0,
