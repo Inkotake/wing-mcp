@@ -260,7 +260,7 @@ export class FakeWingDriver implements WingDriver {
     this.params.set(path, { ...value });
 
     // Signal propagation: update dependent meters when state changes
-    if (path.match(/^\/(ch\/\d+|main\/lr)\/(mute|fader|source|gate\/.*)$/)) {
+    if (path.match(/^\/(ch\/\d+|bus\/\d+|main\/lr)\/(mute|fader|source|gate\/.*)$/)) {
       const target = path.replace(/\/(mute|fader|source|gate\/.*)$/, "");
       this.propagateMeter(target);
     }
@@ -330,6 +330,7 @@ export class FakeWingDriver implements WingDriver {
         break;
       case "bus_muted_bus1":
         this.params.set("/bus/1/mute", { type: "bool", value: true });
+        this.propagateMeter("/bus/1");
         break;
       case "output_patch_wrong":
         this.params.set("/main/lr/meter/left", { type: "float", value: -120.0, unit: "dBFS" });
@@ -388,6 +389,37 @@ export class FakeWingDriver implements WingDriver {
       const mainOut = isMuted ? -120 : summedDb;
       this.params.set("/main/lr/meter/left", { type: "float", value: mainOut, unit: "dBFS" });
       this.params.set("/main/lr/meter/right", { type: "float", value: mainOut, unit: "dBFS" });
+    }
+
+    // Bus propagation: compute bus post-fader from channel sends
+    const busMatch = target.match(/^\/bus\/(\d+)$/);
+    if (busMatch) {
+      const b = parseInt(busMatch[1]);
+      const busMute = this.params.get(`/bus/${b}/mute`);
+      const busFader = this.params.get(`/bus/${b}/fader`);
+      const isBusMuted = busMute?.type === "bool" && busMute.value === true;
+      const busFaderDb = busFader?.type === "float" ? busFader.value as number : 0;
+
+      // Sum all channel sends to this bus
+      let summedSend = -120;
+      for (let ch = 1; ch <= 48; ch++) {
+        const chMute = this.params.get(`/ch/${ch}/mute`);
+        const isChMuted = chMute?.type === "bool" && chMute.value === true;
+        if (isChMuted) continue;
+        const chPost = this.params.get(`/ch/${ch}/meter/post_fader`);
+        const sendLevel = this.params.get(`/ch/${ch}/send/${b}/level`);
+        if (chPost?.type === "float" && sendLevel?.type === "float") {
+          const postDb = chPost.value as number;
+          const sendDb = sendLevel.value as number;
+          if (postDb > -90 && sendDb > -90) {
+            const contrib = postDb + sendDb;
+            if (contrib > summedSend) summedSend = contrib;
+          }
+        }
+      }
+
+      const busOut = isBusMuted ? -120 : (busFaderDb < -89 ? -120 : summedSend + busFaderDb);
+      this.params.set(`/bus/${b}/meter/post_fader`, { type: "float", value: busOut, unit: "dBFS" });
     }
   }
 
