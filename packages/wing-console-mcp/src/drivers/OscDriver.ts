@@ -391,7 +391,39 @@ export class OscDriver implements WingDriver {
     if (!this.connected) throw new Error("DEVICE_DISCONNECTED");
     const oscPath = canonicalToOsc(path);
     if (!oscPath) throw new Error(`PARAM_NOT_FOUND: No OSC mapping for ${path}`);
-    return this.queryOsc(oscPath);
+    const raw = await this.queryOsc(oscPath);
+    // Normalize: WING bool-like params (integer 0/1) → {type:"bool"}
+    return this.normalizeOscValue(path, raw);
+  }
+
+  /** Normalize OSC response to canonical WingValue using propmap metadata */
+  private normalizeOscValue(canonicalPath: string, raw: WingValue): WingValue {
+    if (!wingPropmap.isLoaded()) return raw;
+
+    // Resolve through canonical mapper to get expected kind
+    const nativePath = wingPropmap.canonicalToNative(canonicalPath);
+    const entry = nativePath ? wingPropmap.lookup(nativePath) : null;
+
+    // Bool normalization: integer 0/1 with minint=0, maxint=1 → bool
+    if (entry && entry.type === "integer" && entry.minint === 0 && entry.maxint === 1) {
+      if (raw.type === "int" || raw.type === "float") {
+        return { type: "bool", value: raw.value === 1 };
+      }
+    }
+
+    // Bool by path convention: mute/phantom/on
+    if (/mute|phantom|vph|on$/.test(canonicalPath) || /mute|vph|^on$/.test(nativePath ?? "")) {
+      if (raw.type === "int") {
+        return { type: "bool", value: raw.value === 1 };
+      }
+    }
+
+    // Fader/level normalization: add unit if propmap has one
+    if (entry && entry.unit && raw.type === "float" && !raw.unit) {
+      return { type: "float", value: raw.value, unit: entry.unit };
+    }
+
+    return raw;
   }
 
   async setParam(path: string, value: WingValue): Promise<void> {

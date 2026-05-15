@@ -140,15 +140,40 @@ export function validateAgainstSchema(
       }
     }
 
-    // Array items
-    if (prop.type === "array" && Array.isArray(value) && prop.items) {
-      for (let i = 0; i < value.length; i++) {
-        const item = value[i];
-        if (prop.items.type && typeof item !== prop.items.type) {
-          errors.push({ path: `${key}[${i}]`, message: `Should be ${prop.items.type}, got ${typeof item}` });
-        }
-        if (prop.items.enum && !prop.items.enum.includes(item as string)) {
-          errors.push({ path: `${key}[${i}]`, message: `Must be one of [${prop.items.enum.join(", ")}]` });
+    // String length limits (global safety caps)
+    if (prop.type === "string" && typeof value === "string") {
+      const v = value as string;
+      if (v.length > 500) {
+        errors.push({ path: key, message: `Field '${key}' exceeds max length 500 (got ${v.length})` });
+      }
+      // Path safety checks
+      if ((key === "path" || key === "target" || key === "target_path" || key.includes("path")) && v.length > 0) {
+        if (!v.startsWith("/")) errors.push({ path: key, message: `Path must start with '/': ${v}` });
+        if (v.includes("..")) errors.push({ path: key, message: `Path contains '..' which is not allowed: ${v}` });
+        if (v.includes("\0")) errors.push({ path: key, message: `Path contains null byte: ${v}` });
+      }
+    }
+
+    // Array items + size limits
+    if (prop.type === "array" && Array.isArray(value)) {
+      const maxItems = key === "targets" || key === "paths" ? 128 : 64;
+      if (value.length > maxItems) {
+        errors.push({ path: key, message: `Array '${key}' exceeds max ${maxItems} items (got ${value.length})` });
+      }
+      if (prop.items) {
+        for (let i = 0; i < value.length; i++) {
+          const item = value[i];
+          const itemType = typeof item;
+          const expected = prop.items.type;
+          // Integer check: allow number values for "integer" type
+          const typeOk = expected === "integer" ? itemType === "number" && Number.isInteger(item)
+            : expected ? itemType === expected : true;
+          if (!typeOk) {
+            errors.push({ path: `${key}[${i}]`, message: `Should be ${expected}, got ${itemType}` });
+          }
+          if (prop.items.enum && !prop.items.enum.includes(item as string)) {
+            errors.push({ path: `${key}[${i}]`, message: `Must be one of [${prop.items.enum.join(", ")}]` });
+          }
         }
       }
     }

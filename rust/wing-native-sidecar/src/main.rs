@@ -130,28 +130,14 @@ fn main() {
                 let devices = discover_devices(timeout);
                 send_response(req.id, Some(serde_json::json!({ "devices": devices })), None);
             }
-            "get_param" => {
-                // Stub: return placeholder until Native protocol is implemented
-                let path = req.params
-                    .as_ref()
-                    .and_then(|p| p.get("path"))
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("/unknown");
-                send_response(req.id, Some(serde_json::json!({
-                    "ok": true,
-                    "stub": true,
-                    "path": path,
-                    "value": { "type": "float", "value": 0.0, "unit": "dB" }
-                })), None);
-            }
-            "set_param" => {
-                // Stub: echo back
-                eprintln!("[sidecar] set_param is a stub — no hardware write performed");
-                send_response(req.id, Some(serde_json::json!({
-                    "ok": true,
-                    "stub": true,
-                    "warning": "Native protocol not yet implemented. No hardware write performed."
-                })), None);
+            "get_param" | "set_param" => {
+                // NOT_IMPLEMENTED: requires libwing integration
+                let method = req.method.as_str();
+                eprintln!("[sidecar] {} is NOT IMPLEMENTED — requires libwing native protocol integration", method);
+                send_response(req.id, None, Some(ResponseError {
+                    code: -32001,
+                    message: format!("NOT_IMPLEMENTED: native {} requires libwing integration. Use OSC driver for basic control or Fake driver for testing.", method),
+                }));
             }
             "status" | "ping" => {
                 send_response(req.id, Some(serde_json::json!({
