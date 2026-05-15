@@ -179,7 +179,8 @@ export class ChangePlanner {
         oldValue: currentValue,
         requestedValue,
         readbackValue: currentValue,
-        confirmationText: confirmationText ?? confirmationId,
+        confirmationText,
+        confirmationId,
         result: "failed",
         driver: this.driver.kind,
       });
@@ -209,7 +210,8 @@ export class ChangePlanner {
       oldValue: currentValue,
       requestedValue,
       readbackValue,
-      confirmationText: confirmationText ?? confirmationId,
+      confirmationText,
+      confirmationId,
       result: match ? "success" : "readback_mismatch",
       driver: this.driver.kind,
     });
