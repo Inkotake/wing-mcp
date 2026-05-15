@@ -1,4 +1,5 @@
 import { DriverKind, WingDevice, WingValue, MeterFrame } from "../types.js";
+import { FakeSignalGraph, NEG_INF } from "./FakeSignalGraph.js";
 
 export type { DriverKind, WingDevice, WingValue, MeterFrame };
 
@@ -25,13 +26,11 @@ export class FakeWingDriver implements WingDriver {
   private connected = false;
   private device: WingDevice;
   private params: Map<string, WingValue> = new Map();
-  private faultConfig: {
-    timeoutProbability: number;
-    disconnectProbability: number;
-    readbackMismatchProbability: number;
-  } = { timeoutProbability: 0, disconnectProbability: 0, readbackMismatchProbability: 0 };
+  private faultConfig = { timeoutProbability: 0, disconnectProbability: 0, readbackMismatchProbability: 0 };
+  private signalGraph: FakeSignalGraph;
 
   constructor() {
+    this.signalGraph = new FakeSignalGraph({ get: (p) => this.params.get(p), set: (p, v) => this.params.set(p, v) });
     this.device = {
       id: "fake-wing-001",
       ip: "127.0.0.1",
@@ -280,9 +279,9 @@ export class FakeWingDriver implements WingDriver {
     }
     this.params.set(path, { ...value });
 
-    // Signal propagation: any signal-affecting change triggers full meter recompute
-    if (path.match(/^\/(ch\/\d+|bus\/\d+|main\/lr|dca\/\d+)\/(mute|fader|fdr|source|gate\/|on|send\/)/)) {
-      this.recomputeAllMeters();
+    // Signal propagation: any signal-affecting change triggers full recompute
+    if (path.match(/^\/(ch\/\d+|bus\/\d+|main\/lr|dca\/\d+)\/(mute|fader|fdr|source|gate\/|on|send\/|assign)/)) {
+      this.signalGraph.recomputeAll();
     }
   }
 
