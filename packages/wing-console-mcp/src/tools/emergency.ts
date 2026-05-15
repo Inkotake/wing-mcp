@@ -117,23 +117,21 @@ export function registerEmergencyTools(
         reason: string; scope?: string; confirmation_id: string;
         confirmation_text?: string;
       }): Promise<ToolResult> => {
-        const scope = args.scope ?? "all";
-
-        // Validate confirmation ticket WITHOUT writing (Emergency v3)
-        const muteVal: WingValue = { type: "bool", value: true };
-        const validationResult = await changePlanner.validateTicketOnly(
-          "wing_emergency_stop_apply",
-          "/main/lr/mute",
-          muteVal,
-          `[EMERGENCY] ${args.reason} — scope: ${scope}`,
-          args.confirmation_id, args.confirmation_text
-        );
-
-        if (!validationResult.ok) {
-          return validationResult;
+        // Validate BATCH confirmation ticket (created by prepare)
+        if (!confirmationManager) {
+          return { ok: false, errors: [{ code: "POLICY_DENIED" as const, message: "Batch confirmation unavailable" }], human_summary: "批量确认系统不可用" };
         }
+        const batchValidation = confirmationManager.validateBatchTicket(
+          args.confirmation_id, "wing_emergency_stop_apply", args.confirmation_text,
+        );
+        if (!batchValidation.valid) {
+          return { ok: false, errors: [{ code: "RISK_CONFIRMATION_REQUIRED" as const, message: batchValidation.error! }], human_summary: `验证失败: ${batchValidation.error}` };
+        }
+        const batchTicket = batchValidation.ticket!;
+        const scope = batchTicket.scope;
 
         // Emergency is now active
+        const muteVal: WingValue = { type: "bool", value: true };
         emergencyActive = true;
         emergencyTimestamp = new Date().toISOString();
 
@@ -183,6 +181,7 @@ export function registerEmergencyTools(
 
         // Emergency stop success: emergencyActive = true (NOT false)
         // Only reset_apply full success clears it
+        confirmationManager.consumeBatchTicket(args.confirmation_id);
         emergencyActive = true;
 
         return {
