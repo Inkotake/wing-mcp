@@ -87,9 +87,9 @@ export function registerEmergencyTools(
       }): Promise<ToolResult> => {
         const scope = args.scope ?? "all";
 
-        // Validate confirmation ticket via changePlanner (uses Main LR as canonical target)
+        // Validate confirmation ticket WITHOUT writing (Emergency v3)
         const muteVal: WingValue = { type: "bool", value: true };
-        const validationResult = await changePlanner.applyWrite(
+        const validationResult = await changePlanner.validateTicketOnly(
           "wing_emergency_stop_apply",
           "/main/lr/mute",
           muteVal,
@@ -237,8 +237,8 @@ export function registerEmergencyTools(
 
         const unmuteVal: WingValue = { type: "bool", value: false };
 
-        // Validate the Main LR unmute via changePlanner first
-        const validationResult = await changePlanner.applyWrite(
+        // Validate confirmation WITHOUT writing (Emergency v3)
+        const validationResult = await changePlanner.validateTicketOnly(
           "wing_emergency_reset_apply",
           "/main/lr/mute",
           unmuteVal,

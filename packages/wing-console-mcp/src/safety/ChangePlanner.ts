@@ -106,6 +106,35 @@ export class ChangePlanner {
     };
   }
 
+  /** Validate a confirmation ticket without writing. Used by Emergency/Batch ops. */
+  async validateTicketOnly(
+    tool: string,
+    target: string,
+    requestedValue: WingValue,
+    reason: string,
+    confirmationId: string,
+    confirmationText?: string,
+  ): Promise<ToolResult> {
+    const risk = this.riskEngine.classify(tool, target);
+    let currentValue: WingValue;
+    try { currentValue = await this.driver.getParam(target); }
+    catch (e: any) { return { ok: false, errors: [{ code: "DEVICE_DISCONNECTED", message: e.message }], human_summary: `无法读取: ${e.message}` }; }
+
+    if (!confirmationId) {
+      return { ok: false, errors: [{ code: "RISK_CONFIRMATION_REQUIRED", message: "Confirmation ID is required." }], human_summary: "需要确认ID" };
+    }
+
+    const validation = this.confirmationManager.validateTicket(
+      confirmationId, tool, target, requestedValue, confirmationText, currentValue,
+    );
+    if (!validation.valid) {
+      const ec = validation.errorCode === "MATERIAL_STATE_CHANGED" ? "MATERIAL_STATE_CHANGED" as const : "RISK_CONFIRMATION_REQUIRED" as const;
+      return { ok: false, errors: [{ code: ec, message: validation.error! }], human_summary: `验证失败: ${validation.error}` };
+    }
+
+    return { ok: true, data: { risk, currentValue }, human_summary: "确认票据验证通过" };
+  }
+
   async applyWrite(
     tool: string,
     target: string,

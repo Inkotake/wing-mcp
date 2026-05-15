@@ -3,6 +3,9 @@ dist/
 data/
 *.tsbuildinfo
 .claude/scheduled_tasks.lock
+*.zip
+*.tgz
+*.tar.gz
 target/
 .env
 *.log

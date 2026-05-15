@@ -405,7 +405,10 @@ export class FakeWingDriver implements WingDriver {
       }
       const summedDb = this.sumDb(channelLevels);
 
-      const mainOut = isMuted ? -120 : summedDb;
+      // Main fader also affects main output
+      const mainFaderParam = this.params.get("/main/lr/fader");
+      const mainFaderDb = mainFaderParam?.type === "float" ? mainFaderParam.value as number : 0;
+      const mainOut = isMuted || mainFaderDb < -89 ? -120 : summedDb + mainFaderDb;
       this.params.set("/main/lr/meter/left", { type: "float", value: mainOut, unit: "dBFS" });
       this.params.set("/main/lr/meter/right", { type: "float", value: mainOut, unit: "dBFS" });
     }
