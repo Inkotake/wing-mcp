@@ -150,7 +150,7 @@ const processingTools = registerProcessingTools(driver, changePlanner);
 const groupTools = registerGroupTools(driver, changePlanner);
 const bulkTools = registerBulkTools(driver, changePlanner);
 const batchPlanner = new BatchChangePlanner(driver, policyEngine, riskEngine, confirmationManager, auditLogger, config.mode);
-const emergencyTools = registerEmergencyTools(driver, changePlanner, batchPlanner);
+const emergencyTools = registerEmergencyTools(driver, changePlanner, batchPlanner, confirmationManager);
 const rawTools = registerRawTools(driver, changePlanner);
 
 // Rate limiter: max 12 writes/min, 2s interval, 10s critical cooldown

@@ -9,6 +9,7 @@ import { registerGroupTools } from "../../src/tools/groups.js";
 import { registerSendTools } from "../../src/tools/sends.js";
 import { registerRoutingTools } from "../../src/tools/routing.js";
 import { registerEmergencyTools } from "../../src/tools/emergency.js";
+import { BatchChangePlanner } from "../../src/safety/BatchChangePlanner.js";
 import { ToolResult } from "../../src/types.js";
 
 function setup(driver: FakeWingDriver) {
@@ -135,7 +136,12 @@ describe("Emergency Tools", () => {
   beforeEach(async () => {
     driver = new FakeWingDriver();
     await driver.connect((await driver.discover({ timeoutMs: 100 }))[0]);
-    tools = registerEmergencyTools(driver, setup(driver));
+    const pe = new PolicyEngine("maintenance", false);
+    const cm = new ConfirmationManager();
+    const al = new AuditLogger();
+    const cp = new ChangePlanner(driver, pe, new RiskEngine(), cm, al, "maintenance");
+    const bp = new BatchChangePlanner(driver, pe, new RiskEngine(), cm, al, "maintenance");
+    tools = registerEmergencyTools(driver, cp, bp, cm);
   });
 
   it("reads emergency status when idle", async () => {

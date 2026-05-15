@@ -122,6 +122,23 @@ export interface ConfirmationTicket {
   createdAt: number;
 }
 
+/** Batch confirmation ticket for multi-target operations (Emergency, Scene recall, etc.) */
+export interface BatchConfirmationTicket {
+  id: string;
+  tool: string;
+  scope: string;
+  operations: Array<{
+    target: string;
+    oldValue: unknown;
+    requestedValue: unknown;
+  }>;
+  risk: Risk;
+  reason: string;
+  exactConfirmationText: string;
+  createdAt: number;
+  expiresAt: number;
+}
+
 // Risk classification map
 export const RISK_MAP: Record<string, Risk> = {
   wing_discover: "none",

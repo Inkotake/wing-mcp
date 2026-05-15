@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
-import { ConfirmationTicket, Risk, WingValue } from "../types.js";
+import { ConfirmationTicket, BatchConfirmationTicket, Risk, WingValue } from "../types.js";
 
 const CONFIRMATION_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -55,6 +55,7 @@ export function valuesEqual(a: unknown, b: unknown): boolean {
 
 export class ConfirmationManager {
   private tickets: Map<string, ConfirmationTicket> = new Map();
+  private batchTickets: Map<string, BatchConfirmationTicket> = new Map();
 
   createTicket(
     tool: string,
@@ -165,12 +166,73 @@ export class ConfirmationManager {
     return ticket;
   }
 
+  // ── Batch ticket methods ─────────────────────────────
+
+  createBatchTicket(
+    tool: string,
+    scope: string,
+    risk: Risk,
+    operations: Array<{ target: string; oldValue: unknown; requestedValue: unknown }>,
+    reason: string,
+    exactConfirmationText: string,
+  ): BatchConfirmationTicket {
+    const ticket: BatchConfirmationTicket = {
+      id: uuidv4(),
+      tool,
+      scope,
+      risk,
+      operations,
+      reason,
+      exactConfirmationText,
+      createdAt: Date.now(),
+      expiresAt: Date.now() + CONFIRMATION_TTL_MS,
+    };
+    this.batchTickets.set(ticket.id, ticket);
+    return ticket;
+  }
+
+  validateBatchTicket(
+    ticketId: string,
+    expectedTool: string,
+    confirmationText?: string,
+  ): { valid: boolean; error?: string; errorCode?: string; ticket?: BatchConfirmationTicket } {
+    const ticket = this.batchTickets.get(ticketId);
+    if (!ticket) return { valid: false, error: "Batch confirmation ticket not found." };
+    if (Date.now() > ticket.expiresAt) { this.batchTickets.delete(ticketId); return { valid: false, error: "Batch confirmation has expired." }; }
+
+    const normalize = (t: string) => t.replace(/_(prepare|apply)$/, "");
+    if (normalize(ticket.tool) !== normalize(expectedTool)) {
+      return { valid: false, error: `Tool mismatch: batch ticket was for ${ticket.tool}` };
+    }
+
+    // high/critical exact match required
+    if (ticket.risk === "high" || ticket.risk === "critical") {
+      if (!confirmationText || confirmationText.trim().length === 0) {
+        return { valid: false, error: `Confirmation text required for ${ticket.risk} risk batch action.` };
+      }
+      const normalizedUser = normalizeConfirmationText(confirmationText);
+      const normalizedRequired = normalizeConfirmationText(ticket.exactConfirmationText);
+      if (normalizedUser !== normalizedRequired) {
+        return { valid: false, error: `Exact confirmation required. You must say: "${ticket.exactConfirmationText}"` };
+      }
+    }
+
+    return { valid: true, ticket };
+  }
+
+  consumeBatchTicket(ticketId: string): BatchConfirmationTicket | undefined {
+    const ticket = this.batchTickets.get(ticketId);
+    this.batchTickets.delete(ticketId);
+    return ticket;
+  }
+
   cleanup() {
     const now = Date.now();
     for (const [id, ticket] of this.tickets) {
-      if (now > ticket.expiresAt) {
-        this.tickets.delete(id);
-      }
+      if (now > ticket.expiresAt) this.tickets.delete(id);
+    }
+    for (const [id, ticket] of this.batchTickets) {
+      if (now > ticket.expiresAt) this.batchTickets.delete(id);
     }
   }
 }

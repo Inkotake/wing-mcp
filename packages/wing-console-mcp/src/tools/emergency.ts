@@ -2,6 +2,7 @@ import { WingDriver } from "../drivers/WingDriver.js";
 import { ToolResult, WingValue } from "../types.js";
 import { ChangePlanner } from "../safety/ChangePlanner.js";
 import { valuesEqual } from "../safety/ConfirmationManager.js";
+import { ConfirmationManager } from "../safety/ConfirmationManager.js";
 import { BatchChangePlanner } from "../safety/BatchChangePlanner.js";
 
 /**
@@ -24,6 +25,7 @@ export function registerEmergencyTools(
   driver: WingDriver,
   changePlanner: ChangePlanner,
   batchPlanner?: BatchChangePlanner,
+  confirmationManager?: ConfirmationManager,
 ) {
   const bp = batchPlanner;
   return {
@@ -50,22 +52,51 @@ export function registerEmergencyTools(
         const scope = args.scope ?? "all";
         const paths: string[] = [];
 
-        // Always include Main LR as the primary emergency target for prepare
-        paths.push("/main/lr/mute");
-        if (scope === "channels_only" || scope === "all") {
+        // Compute target list from scope
+        if (scope === "main_only" || scope === "all") paths.push("/main/lr/mute");
+        if (scope === "channels_only") {
+          for (let ch = 1; ch <= 48; ch++) paths.push(`/ch/${ch}/mute`);
+        }
+        if (scope === "all") {
           for (let ch = 1; ch <= 48; ch++) paths.push(`/ch/${ch}/mute`);
           for (let b = 1; b <= 16; b++) paths.push(`/bus/${b}/mute`);
           for (let d = 1; d <= 8; d++) paths.push(`/dca/${d}/mute`);
         }
 
-        // DO NOT set emergencyActive here — only in apply
-        const newVal: WingValue = { type: "bool", value: true };
-        return changePlanner.prepareWrite(
-          "wing_emergency_stop",
-          "/main/lr/mute",  // canonical target for all emergency scopes
-          newVal,
-          `[EMERGENCY] ${args.reason} — scope: ${scope} — ${paths.length} targets will be muted`
+        // Read ALL old values (snapshot for safe restore)
+        const operations: Array<{ target: string; oldValue: unknown; requestedValue: unknown }> = [];
+        const muteVal: WingValue = { type: "bool", value: true };
+        for (const path of paths) {
+          try {
+            const oldVal = await driver.getParam(path);
+            operations.push({ target: path, oldValue: oldVal, requestedValue: muteVal });
+          } catch {
+            return { ok: false, errors: [{ code: "DEVICE_DISCONNECTED", message: `Cannot read ${path}` }], human_summary: `无法读取 ${path}` };
+          }
+        }
+
+        // Create batch confirmation ticket
+        if (!confirmationManager) {
+          return { ok: false, errors: [{ code: "POLICY_DENIED", message: "Batch confirmation unavailable" }], human_summary: "批量确认系统不可用" };
+        }
+        const exactText = `确认执行紧急停止 (scope: ${scope}, ${paths.length} targets)`;
+        const ticket = confirmationManager.createBatchTicket(
+          "wing_emergency_stop", scope, "critical", operations,
+          `[EMERGENCY] ${args.reason}`, exactText,
         );
+
+        return {
+          ok: true,
+          data: {
+            scope,
+            targetCount: paths.length,
+            confirmationId: ticket.id,
+            confirmationTemplate: exactText,
+            risk: "critical",
+            needsConfirmation: true,
+          },
+          human_summary: `🚨 准备紧急停止 (scope: ${scope}, ${paths.length} targets)。确认ID: ${ticket.id}。请说: "${exactText}"`,
+        };
       },
     },
 
