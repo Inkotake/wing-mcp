@@ -164,10 +164,11 @@ describe("Emergency Tools", () => {
     expect(r.ok).toBe(true);
   });
 
-  it("prepares emergency reset", async () => {
+  it("refuses reset without snapshot", async () => {
+    // Reset should fail when no emergency snapshot exists
     const r: ToolResult = await tools.wing_emergency_reset.handler({
-      reason: "feedback resolved"
+      reason: "no emergency active"
     });
-    expect(r.ok).toBe(true);
+    expect(r.ok).toBe(false);
   });
 });

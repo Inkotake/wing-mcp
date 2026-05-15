@@ -233,52 +233,55 @@ export function registerEmergencyTools(
         required: ["reason"],
       },
       handler: async (args: { reason: string }): Promise<ToolResult> => {
-        const newVal: WingValue = { type: "bool", value: false };
-        return changePlanner.prepareWrite(
-          "wing_emergency_reset",
-          "/main/lr/mute",
-          newVal,
-          `[EMERGENCY RESET] ${args.reason} — will unmute Main LR + all channels/buses/DCAs`
+        // Require emergency snapshot for restore
+        if (!emergencySnapshot || emergencySnapshot.length === 0) {
+          return { ok: false, errors: [{ code: "POLICY_DENIED", message: "No emergency snapshot." }], human_summary: "无紧急快照。" };
+        }
+        // Create batch ticket for all snapshot targets
+        if (!confirmationManager) {
+          return { ok: false, errors: [{ code: "POLICY_DENIED", message: "Batch confirmation unavailable" }], human_summary: "批量确认系统不可用" };
+        }
+        const operations = emergencySnapshot.map(s => ({ target: s.path, oldValue: s.oldValue, requestedValue: s.oldValue }));
+        const exactText = `确认恢复紧急停止前的状态 (${operations.length} targets, Main LR last)`;
+        const ticket = confirmationManager.createBatchTicket(
+          "wing_emergency_reset", "reset", "high", operations, args.reason, exactText,
         );
+        return {
+          ok: true,
+          data: { confirmationId: ticket.id, confirmationTemplate: exactText, targetCount: operations.length, risk: "high" },
+          human_summary: `准备恢复 ${operations.length} 个目标到紧急前状态。确认ID: ${ticket.id}`,
+        };
       },
     },
 
     wing_emergency_reset_apply: {
-      description: "Apply emergency reset: unmute Main LR and all channels/buses/DCAs. HIGH risk. Write: prepare/apply/readback/audit.",
+      description: "Apply emergency reset: restore all targets to pre-emergency state. HIGH risk. Write: prepare/apply/readback/audit.",
       inputSchema: {
         type: "object" as const,
         properties: {
           reason: { type: "string" },
           confirmation_id: { type: "string" },
-          confirmation_text: { type: "string" },
+          confirmation_text: { type: "string", description: "Exact confirmation text. Required for high-risk reset." },
         },
-        required: ["reason", "confirmation_id"],
+        required: ["reason", "confirmation_id", "confirmation_text"],
       },
       handler: async (args: {
         reason: string; confirmation_id: string; confirmation_text?: string;
       }): Promise<ToolResult> => {
-        // Require a snapshot to restore from — refuse blind unmute
+        // Require a snapshot
         if (!emergencySnapshot || emergencySnapshot.length === 0) {
-          return {
-            ok: false,
-            errors: [{ code: "POLICY_DENIED", message: "No emergency snapshot available. Cannot blindly unmute — restore manually." }],
-            human_summary: "⚠️ 无紧急快照，拒绝自动恢复。请手动逐步解除静音。",
-          };
+          return { ok: false, errors: [{ code: "POLICY_DENIED", message: "No emergency snapshot." }], human_summary: "⚠️ 无紧急快照。" };
         }
-
-        const unmuteVal: WingValue = { type: "bool", value: false };
-
-        // Validate confirmation WITHOUT writing (Emergency v3)
-        const validationResult = await changePlanner.validateTicketOnly(
-          "wing_emergency_reset_apply",
-          "/main/lr/mute",
-          unmuteVal,
-          `[EMERGENCY RESET] ${args.reason} — restoring from snapshot`,
-          args.confirmation_id,
-          args.confirmation_text
+        // Validate batch confirmation ticket
+        if (!confirmationManager) {
+          return { ok: false, errors: [{ code: "POLICY_DENIED", message: "Batch confirmation unavailable" }], human_summary: "批量确认系统不可用" };
+        }
+        const validation = confirmationManager.validateBatchTicket(
+          args.confirmation_id, "wing_emergency_reset_apply", args.confirmation_text,
         );
-
-        if (!validationResult.ok) return validationResult;
+        if (!validation.valid) {
+          return { ok: false, errors: [{ code: "RISK_CONFIRMATION_REQUIRED" as const, message: validation.error! }], human_summary: `验证失败: ${validation.error}` };
+        }
 
         // Restore from snapshot: use BatchChangePlanner for per-target audit
         const mainEntry = emergencySnapshot.find(s => s.path === "/main/lr/mute");
@@ -304,13 +307,14 @@ export function registerEmergencyTools(
           }
         }
 
+        confirmationManager.consumeBatchTicket(args.confirmation_id);
+
         if (totalFail === 0) {
           emergencyActive = false;
           emergencyTimestamp = null;
           emergencySnapshot = null;
         } else {
           emergencyActive = true;
-          // Keep timestamp and snapshot for safe retry
         }
 
         return {
