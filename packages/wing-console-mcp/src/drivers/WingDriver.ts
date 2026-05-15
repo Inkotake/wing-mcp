@@ -116,6 +116,27 @@ export class FakeWingDriver implements WingDriver {
         [`/fx/${f}/on`, { type: "bool", value: f <= 2 }],
       ]);
     }
+    // DCA/mute group assignments (default: no assignments)
+    // Channel main assign + send on/off
+    for (let ch = 1; ch <= 48; ch++) {
+      add([
+        [`/ch/${ch}/main/assign`, { type: "bool", value: true }],
+      ]);
+      for (let d = 1; d <= 8; d++) {
+        add([[`/ch/${ch}/dca/${d}/assign`, { type: "bool", value: false }]]);
+      }
+      for (let g = 1; g <= 6; g++) {
+        add([[`/ch/${ch}/mutegroup/${g}/assign`, { type: "bool", value: false }]]);
+      }
+      for (let b = 1; b <= 16; b++) {
+        add([[`/ch/${ch}/send/${b}/on`, { type: "bool", value: true }]]);
+      }
+    }
+    // Output connection state
+    add([
+      ["/main/lr/output/connected", { type: "bool", value: true }],
+    ]);
+
     // Recorder
     add([
       ["/recorder/transport", { type: "string", value: "stopped" }],
@@ -333,17 +354,17 @@ export class FakeWingDriver implements WingDriver {
         this.propagateMeter("/main/lr");
         break;
       case "dca_muted_ch1":
+        this.params.set("/ch/1/dca/1/assign", { type: "bool", value: true });
         this.params.set("/dca/1/mute", { type: "bool", value: true });
+        this.recomputeAllMeters();
         break;
       case "bus_muted_bus1":
         this.params.set("/bus/1/mute", { type: "bool", value: true });
         this.propagateMeter("/bus/1");
         break;
       case "output_patch_wrong":
-        // Simulate wrong output routing: Main LR shows signal but outputs disconnected
-        // Main meter stays active (signal present) but output path reports no signal
-        this.params.set("/main/lr/meter/left", { type: "float", value: -120.0, unit: "dBFS" });
-        this.params.set("/main/lr/meter/right", { type: "float", value: -120.0, unit: "dBFS" });
+        // Wrong output routing: output disconnected, main meter still shows signal
+        this.params.set("/main/lr/output/connected", { type: "bool", value: false });
         break;
       case "normal":
       default:
@@ -383,7 +404,30 @@ export class FakeWingDriver implements WingDriver {
       const effectiveInput = hasSource ? inputLevel : -120;
       const gateClamped = gateActive && effectiveInput < gateDb;
       const preFader = gateClamped ? -120 : effectiveInput;
-      const postFader = isMuted ? -120 : (faderDb < -89 ? -120 : preFader + faderDb);
+
+      // Check DCA mute overrides
+      let dcaMuted = false;
+      for (let d = 1; d <= 8; d++) {
+        const dcaAssign = this.params.get(`/ch/${ch}/dca/${d}/assign`);
+        const dcaMute = this.params.get(`/dca/${d}/mute`);
+        if (dcaAssign?.type === "bool" && dcaAssign.value === true &&
+            dcaMute?.type === "bool" && dcaMute.value === true) {
+          dcaMuted = true; break;
+        }
+      }
+      // Check mute group overrides
+      let muteGroupActive = false;
+      for (let g = 1; g <= 6; g++) {
+        const mgAssign = this.params.get(`/ch/${ch}/mutegroup/${g}/assign`);
+        const mgMute = this.params.get(`/mutegroup/${g}/mute`);
+        if (mgAssign?.type === "bool" && mgAssign.value === true &&
+            mgMute?.type === "bool" && mgMute.value === true) {
+          muteGroupActive = true; break;
+        }
+      }
+
+      const effectiveMuted = isMuted || dcaMuted || muteGroupActive;
+      const postFader = effectiveMuted ? -120 : (faderDb < -89 ? -120 : preFader + faderDb);
 
       this.params.set(`/ch/${ch}/meter/input`, { type: "float", value: effectiveInput, unit: "dBFS" });
       this.params.set(`/ch/${ch}/meter/pre_fader`, { type: "float", value: preFader, unit: "dBFS" });
@@ -395,9 +439,11 @@ export class FakeWingDriver implements WingDriver {
       const mainMute = this.params.get("/main/lr/mute");
       const isMuted = mainMute?.type === "bool" && mainMute.value === true;
 
-      // Sum all channel post-fader contributions using proper dB math
+      // Sum only channels assigned to main
       const channelLevels: number[] = [];
       for (let ch = 1; ch <= 48; ch++) {
+        const mainAssign = this.params.get(`/ch/${ch}/main/assign`);
+        if (mainAssign?.type === "bool" && mainAssign.value === false) continue;
         const postMeter = this.params.get(`/ch/${ch}/meter/post_fader`);
         if (postMeter?.type === "float") {
           channelLevels.push(postMeter.value as number);
@@ -425,6 +471,9 @@ export class FakeWingDriver implements WingDriver {
       // Sum all channel sends to this bus using proper dB math
       const sendContribs: number[] = [];
       for (let ch = 1; ch <= 48; ch++) {
+        // Check send on/off
+        const sendOn = this.params.get(`/ch/${ch}/send/${b}/on`);
+        if (sendOn?.type === "bool" && sendOn.value === false) continue;
         const chMute = this.params.get(`/ch/${ch}/mute`);
         if (chMute?.type === "bool" && chMute.value === true) continue;
         const chPost = this.params.get(`/ch/${ch}/meter/post_fader`);
