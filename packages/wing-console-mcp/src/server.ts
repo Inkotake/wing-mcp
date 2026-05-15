@@ -91,6 +91,7 @@ const config = {
   liveMode: process.env.WING_LIVE_MODE === "1",
   driver: process.env.WING_DRIVER ?? "fake",
   enableRaw: process.env.WING_ENABLE_RAW === "1",
+  rawUnlocked: process.env.WING_RAW_UNLOCK === "I_UNDERSTAND_RAW_WING_RISK",
 };
 
 // Initialize driver based on config
@@ -172,7 +173,8 @@ const allTools: Record<string, any> = {
   ...bulkTools,
   ...emergencyTools,
   // Raw tools only if enabled
-  ...(config.enableRaw ? rawTools : {}),
+  // Raw tools: developer_raw + ENABLE_RAW + RAW_UNLOCK + !liveMode
+  ...(config.mode === "developer_raw" && config.enableRaw && config.rawUnlocked && !config.liveMode ? rawTools : {}),
 };
 
 // Shared context passed to tool handlers
@@ -203,7 +205,7 @@ const server = new Server(
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   const toolList: Array<Record<string, unknown>> = [];
   for (const [name, tool] of Object.entries(allTools)) {
-    if (!config.enableRaw && name.includes("raw_")) continue;
+    if (!(config.mode === "developer_raw" && config.enableRaw && config.rawUnlocked && !config.liveMode) && name.includes("raw_")) continue;
     const isRead = !name.includes("_apply") && !name.includes("_set_") && !name.includes("_adjust_");
     const isDestructive = name.includes("_apply") || name.includes("phantom") || name.includes("scene_recall") || name.includes("routing_set") || name.includes("raw_");
     toolList.push({

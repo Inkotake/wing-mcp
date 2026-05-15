@@ -78,8 +78,9 @@ export function registerEmergencyTools(
           reason: { type: "string" },
           scope: { type: "string", enum: ["all", "main_only", "channels_only"] },
           confirmation_id: { type: "string" },
+          confirmation_text: { type: "string", description: "Exact confirmation text. Required for critical emergency actions." },
         },
-        required: ["reason", "confirmation_id"],
+        required: ["reason", "confirmation_id", "confirmation_text"],
       },
       handler: async (args: {
         reason: string; scope?: string; confirmation_id: string;
@@ -130,11 +131,11 @@ export function registerEmergencyTools(
         }
         emergencySnapshot = snapshot;
 
-        // Use BatchChangePlanner for per-target read/write/readback/audit
+        // Use BatchChangePlanner for per-target read/write/readback/audit (ALL targets, including Main LR)
         let batchResult: { successCount: number; failCount: number; operations: Array<{ target: string }> };
         if (bp) {
           const result = await bp.executeBatch(
-            paths.slice(1).map(p => ({ target: p, requestedValue: muteVal, reason: `[EMERGENCY] ${args.reason}` })),
+            paths.map(p => ({ target: p, requestedValue: muteVal, reason: `[EMERGENCY] ${args.reason}` })),
             "wing_emergency_stop_apply", args.confirmation_id, args.confirmation_text,
           );
           batchResult = { successCount: result.successCount, failCount: result.failCount, operations: result.operations };
@@ -146,7 +147,7 @@ export function registerEmergencyTools(
             try { await driver.setParam(path, muteVal); ok++; ops.push({ target: path }); }
             catch { fail++; }
           }
-          batchResult = { successCount: ok + 1, failCount: fail, operations: ops }; // +1 for Main LR already done
+          batchResult = { successCount: ok, failCount: fail, operations: ops };
         }
 
         // Emergency stop success: emergencyActive = true (NOT false)
@@ -273,16 +274,23 @@ export function registerEmergencyTools(
           }
         }
 
-        emergencyActive = totalFail > 0;
-        emergencyTimestamp = null;
-        emergencySnapshot = null;
+        if (totalFail === 0) {
+          emergencyActive = false;
+          emergencyTimestamp = null;
+          emergencySnapshot = null;
+        } else {
+          emergencyActive = true;
+          // Keep timestamp and snapshot for safe retry
+        }
 
         return {
           ok: totalFail === 0,
-          data: { targets_restored: totalOk, targets_failed: totalFail },
+          data: { targets_restored: totalOk, targets_failed: totalFail,
+            snapshotRetained: totalFail > 0,
+          },
           human_summary: totalFail === 0
             ? `✅ 紧急状态已解除: ${totalOk} 个目标已恢复至紧急前状态`
-            : `⚠️ 紧急状态部分解除: ${totalOk} 成功, ${totalFail} 失败 — 紧急状态保持激活`,
+            : `⚠️ 紧急状态部分解除: ${totalOk} 成功, ${totalFail} 失败 — 紧急状态保持激活, snapshot 已保留可重试`,
         };
       },
     },

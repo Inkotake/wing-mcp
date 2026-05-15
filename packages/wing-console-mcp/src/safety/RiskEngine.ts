@@ -1,20 +1,26 @@
 import { Risk, RISK_MAP } from "../types.js";
 
+const RISK_RANK: Record<Risk, number> = { none: 0, low: 1, medium: 2, high: 3, critical: 4 };
+
+function maxRisk(a: Risk, b: Risk): Risk {
+  return RISK_RANK[a] >= RISK_RANK[b] ? a : b;
+}
+
 export class RiskEngine {
   classify(tool: string, target?: string): Risk {
-    const baseRisk = RISK_MAP[tool] ?? "none";
+    let risk = RISK_MAP[tool] ?? "none";
 
-    // Elevate risk based on target
+    // Target-based rules can only ELEVATE risk, never downgrade
     if (target) {
-      if (/phantom/i.test(target)) return "critical";
-      if (/routing|route|patch/i.test(target)) return "critical";
-      if (/scene|snapshot|show.*recall/i.test(target)) return "critical";
-      if (/main.*(?:mute|fader|lr)/i.test(target)) return "high";
-      if (/dca|mute.?group/i.test(target)) return "high";
-      if (/global|network|firmware/i.test(target)) return "critical";
+      if (/phantom/i.test(target)) risk = maxRisk(risk, "critical");
+      if (/routing|route|patch/i.test(target)) risk = maxRisk(risk, "critical");
+      if (/scene|snapshot|show.*recall/i.test(target)) risk = maxRisk(risk, "critical");
+      if (/global|network|firmware/i.test(target)) risk = maxRisk(risk, "critical");
+      if (/main.*(?:mute|fader|lr)/i.test(target)) risk = maxRisk(risk, "high");
+      if (/dca|mute.?group/i.test(target)) risk = maxRisk(risk, "high");
     }
 
-    return baseRisk;
+    return risk;
   }
 
   requiresConfirmation(risk: Risk): boolean {
