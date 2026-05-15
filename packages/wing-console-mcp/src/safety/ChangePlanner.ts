@@ -64,7 +64,7 @@ export class ChangePlanner {
       };
     }
 
-    // 4. If no confirmation needed, apply directly
+    // 4. If no confirmation needed, return executable plan (no write yet — caller must use applyWrite)
     if (!decision.requiresConfirmation) {
       return {
         ok: true,

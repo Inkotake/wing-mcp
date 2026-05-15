@@ -56,8 +56,8 @@ function validateWingValue(value: unknown, path: string): ValidationError[] {
     if (t === "int" && (typeof val !== "number" || !Number.isInteger(val))) {
       errors.push({ path: `${path}.value`, message: `int WingValue requires integer value, got ${typeof val}` });
     }
-    if (t === "float" && typeof val !== "number") {
-      errors.push({ path: `${path}.value`, message: `float WingValue requires numeric value, got ${typeof val}` });
+    if (t === "float" && (typeof val !== "number" || !Number.isFinite(val))) {
+      errors.push({ path: `${path}.value`, message: `float WingValue requires finite numeric value, got ${typeof val}${typeof val === "number" && !Number.isFinite(val) ? " (NaN/Infinity)" : ""}` });
     }
     if (t === "string" && typeof val !== "string") {
       errors.push({ path: `${path}.value`, message: `string WingValue requires string value, got ${typeof val}` });

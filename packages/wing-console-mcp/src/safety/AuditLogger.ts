@@ -14,6 +14,7 @@ export class AuditLogger {
   private auditDir: string;
   private writeStream: fs.WriteStream | null = null;
   private maxRecords = 100000; // cap in-memory records
+  diskWriteFailures = 0;
 
   constructor(sessionId?: string, auditDir?: string) {
     this.sessionId = sessionId ?? `sess_${Date.now()}`;
@@ -97,7 +98,7 @@ export class AuditLogger {
       const line = JSON.stringify(record) + "\n";
       this.writeStream?.write(line);
     } catch {
-      // Don't crash if disk write fails — audit is best-effort persistence
+      this.diskWriteFailures++;
     }
 
     return record;

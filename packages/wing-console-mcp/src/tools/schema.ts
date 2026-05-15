@@ -53,6 +53,7 @@ export function registerSchemaTools(driver: WingDriver) {
         );
         // Also search WING propmap if loaded
         let propmapResults: Array<{ fullname: string; longname: string; type: string }> = [];
+        wingPropmap.load(); // ensure loaded even in test/import scenarios
         if (wingPropmap.isLoaded()) {
           propmapResults = wingPropmap.search(q, 10).map(e => ({
             fullname: e.fullname,
