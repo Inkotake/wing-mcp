@@ -101,6 +101,7 @@ export function registerRoutingTools(driver: WingDriver, changePlanner: ChangePl
           destination: { type: "string", description: "New routing destination (must match prepare)." },
           reason: { type: "string", description: "Why this routing change is needed." },
           confirmation_id: { type: "string", description: "Confirmation ID from prepare step." },
+          confirmation_text: { type: "string", description: "Exact confirmation text from the user." },
         },
         required: ["target", "destination", "reason", "confirmation_id"],
       },

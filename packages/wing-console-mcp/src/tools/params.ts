@@ -71,6 +71,7 @@ export function registerParamTools(driver: WingDriver, changePlanner: ChangePlan
           value: { type: "object", description: "WING value object (must match prepare)." },
           reason: { type: "string", description: "Why this change is being made." },
           confirmation_id: { type: "string", description: "Confirmation ID from wing_param_set_prepare." },
+          confirmation_text: { type: "string", description: "Exact confirmation text from the user." },
         },
         required: ["path", "value", "reason", "confirmation_id"],
       },

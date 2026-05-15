@@ -250,6 +250,7 @@ export function registerDiagnosisTools(driver: WingDriver, changePlanner: Change
           target_value: { type: "object", description: "Target value (must match prepare)." },
           fix_description: { type: "string", description: "Fix description." },
           confirmation_id: { type: "string", description: "Confirmation ID from prepare." },
+          confirmation_text: { type: "string", description: "Exact confirmation text from the user." },
         },
         required: ["session_id", "tool_to_use", "target_path", "target_value", "fix_description", "confirmation_id"],
       },
